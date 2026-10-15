@@ -22,45 +22,45 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Setup Node.js (without cache)
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: npm
 
-      - name: Fix npm cache
-        run: |
-          npm cache clean --force
-          npm cache verify
+      - name: Install npm dependencies
+        run: npm install --no-optional --no-audit --no-fund
 
-      - name: Install dependencies with retry
-        run: |
-          npm install --legacy-peer-deps || npm install --legacy-peer-deps || npm install
-
-      - name: Build Next.js
+      - name: Build Next.js app
         env:
-          NEXT_PUBLIC_API_BASE: https://api.starnote.app
           SKIP_ENV_VALIDATION: "true"
           NODE_ENV: production
-        run: |
-          npm run build || npm run build
+        run: npm run build
 
       - name: Setup Java 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
-          cache: gradle
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
         with:
           api-level: 34
-          ndk-version: 26.0.10792818
 
-      - name: Install Capacitor globally
-        run: npm install -g @capacitor/cli --force
+      - name: Setup Capacitor
+        run: |
+          npm install -g @capacitor/cli
+          npm install --save-dev @capacitor/cli @capacitor/core @capacitor/android
 
-      - name: Install Capacitor deps
-        run: npm install @capacitor/cli @capacitor/core @capacitor/android --legacy-peer-deps
+      - name: Create Capacitor config
+        run: |
+          echo '{
+            "appId": "com.starnote.app",
+            "appName": "StarNote",
+            "webDir": ".next"
+          }' > capacitor.config.json
 
+      - name: Init Capacitor
+        run: npx cap init --web-dir .next || true
+
+      - name: Add Android platform
