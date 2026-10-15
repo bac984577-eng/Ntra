@@ -251,7 +251,7 @@ jobs:
               c.onpointerdown=e=>{
                 $('#pp').hidden=true;ap=i;const q=pt(e);
                 const hit=()=>[...pg.strokes].reverse().find(s=>s.t==='tx'&&q[0]>=s.x&&q[0]<=s.x+s.w&&q[1]>=s.y&&q[1]<=s.y+s.h);
-                if(tool==='hand'){const h=hit();if(h){lt=performance.now();showBox(i,h,false)}else if(sel)deselect();actv();return}
+                if(tool==='hand'){const h=hit();if(h){e.preventDefault();lt=performance.now();showBox(i,h,false)}else if(sel)deselect();actv();return}
                 e.preventDefault();
                 if(tool==='tx'){
                   const h=hit();actv();
@@ -318,18 +318,20 @@ jobs:
               [...BASE,...S.fonts.map(x=>[x.n,x.n])].forEach(([v,l])=>{const op=new Option(l,v);op.selected=v===s.f;f.add(op)});
               f.onchange=()=>{s.f=f.value;applyTx();pv()};
               const u=document.createElement('label');u.className='ib';u.style.cssText='border:1px solid var(--ln);border-radius:10px;position:relative;cursor:pointer';u.title='استيراد خط';
-              u.innerHTML=ic('up')+'<input type="file" accept=".ttf,.otf,.woff,.woff2" style="position:absolute;inset:0;opacity:0;cursor:pointer" aria-label="استيراد خط">';
+              u.innerHTML=ic('up')+'<input type="file" multiple style="position:absolute;inset:0;opacity:0;cursor:pointer" aria-label="استيراد خط">';
               u.querySelector('input').onchange=impFont;r.append(f,u);o.append(r);
             }
             const c=document.createElement('canvas');c.id='pv';c.width=560;c.height=108;o.append(c);pv();
           }
-          function impFont(e){
-            const file=e.target.files[0];if(!file)return;const fr=new FileReader();
-            fr.onload=async()=>{
-              const f={n:file.name.replace(/\.[^.]+$/,'').slice(0,24),d:String(fr.result).split(',')[1]};
-              if(!await loadFont(f)){toast('تعذّر قراءة ملف الخط');return}
-              S.fonts=S.fonts.filter(x=>x.n!==f.n);S.fonts.push(f);save();T.tx.f=f.n;opts();applyTx();cv.forEach((_,i)=>rp(i));toast('تمت إضافة الخط: '+f.n);
-            };fr.readAsDataURL(file);
+          async function impFont(e){
+            const files=[...e.target.files];e.target.value='';let ok=0;const bad=[];
+            for(const file of files){
+              const d=await new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(String(fr.result).split(',')[1]||'');fr.onerror=()=>r('');fr.readAsDataURL(file)});
+              const f={n:file.name.replace(/\.[^.]+$/,'').replace(/["\\]/g,'').slice(0,24)||'خط',d};
+              if(d&&await loadFont(f)){S.fonts=S.fonts.filter(x=>x.n!==f.n);S.fonts.push(f);T.tx.f=f.n;ok++}else bad.push(file.name.split('.').pop().toUpperCase());
+            }
+            if(ok){save();opts();applyTx();cv.forEach((_,i)=>rp(i))}
+            toast(ok?'تمت إضافة '+ok+' خط'+(bad.length?' - غير مدعوم: '+bad.join('، '):''):'صيغة غير مدعومة ('+bad.join('، ')+'). المدعوم: TTF وOTF وWOFF وWOFF2');
           }
 
           let sel=null,selI=0,lt=0,box=null;
@@ -345,16 +347,27 @@ jobs:
             if(!s.s.trim())cur.pages[i].strokes=cur.pages[i].strokes.filter(x=>x!==s);
             rp(i);cur.u=Date.now();save();
           }
+          function delBox(){
+            if(!sel)return;const i=selI,s=sel;snap(i);s.hid=false;box.remove();box=null;sel=null;
+            cur.pages[i].strokes=cur.pages[i].strokes.filter(x=>x!==s);rp(i);cur.u=Date.now();save();
+          }
+          document.addEventListener('keydown',e=>{
+            if(!sel||box.classList.contains('ed')||/INPUT|SELECT|TEXTAREA/.test((e.target||{}).tagName||''))return;
+            if(e.key==='Delete'||e.key==='Backspace'){e.preventDefault();delBox()}
+          });
           function startEdit(){const ta=box.querySelector('textarea');box.classList.add('ed');ta.readOnly=false;ta.focus();ta.setSelectionRange(ta.value.length,ta.value.length)}
           function showBox(i,s,edit){
             if(sel&&sel!==s)deselect();
             if(!sel){sel=s;selI=i;s.hid=true;rp(i);box=document.createElement('div');box.className='tb';
-              box.innerHTML='<textarea dir="auto" readonly aria-label="النص"></textarea><div class="rs"></div>';
+              box.innerHTML='<textarea dir="auto" aria-label="النص"></textarea><div class="rs"></div>';
               cv[i].parentNode.append(box);wireBox()}
-            box.querySelector('textarea').value=s.s;place();if(edit)startEdit();
+            box.querySelector('textarea').value=s.s;place();
+            if(edit)startEdit();else{const t=box.querySelector('textarea');t.focus({preventScroll:true});t.setSelectionRange(t.value.length,t.value.length)}
           }
           function wireBox(){
             const ta=box.querySelector('textarea'),rs=box.querySelector('.rs');let st=null,rz=null;
+            ta.onbeforeinput=e=>{if(box.classList.contains('ed'))return;if(e.inputType.startsWith('delete')){e.preventDefault();delBox()}else box.classList.add('ed')};
+            ta.onkeydown=e=>{if((e.key==='Delete'||e.key==='Backspace')&&(!box.classList.contains('ed')||(e.key==='Backspace'&&!ta.value))){e.preventDefault();delBox()}};
             ta.oninput=()=>{sel.s=ta.value;if(ta.scrollHeight>ta.clientHeight+1){sel.h+=ta.scrollHeight/ks()-ta.clientHeight/ks()+2;place()}};
             box.onpointerdown=e=>{if(e.target===rs||box.classList.contains('ed'))return;e.preventDefault();box.setPointerCapture(e.pointerId);snap(selI);st={px:e.clientX,py:e.clientY,x:sel.x,y:sel.y,m:false}};
             box.onpointermove=e=>{if(!st)return;const dx=e.clientX-st.px,dy=e.clientY-st.py;if(Math.hypot(dx,dy)>5)st.m=true;
