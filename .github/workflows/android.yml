@@ -274,7 +274,7 @@ jobs:
               c.onpointerup=up;c.onpointercancel=up;w.append(c);b.append(w);cv.push(c);rp(i);
             });
           }
-          {undo.push([i,JSON.stringify(cur.pages[i].strokes)]);if(undo.length>40)undo.shift();redo=[]};
+          const snap=i=>{undo.push([i,JSON.stringify(cur.pages[i].strokes)]);if(undo.length>40)undo.shift();redo=[]};
           function erase(pg,x,y){
             const n=pg.strokes.length,r=T.er.w*1.5+6;
             pg.strokes=pg.strokes.filter(s=>s.t==='tx'?!(x>=s.x-r&&x<=s.x+s.w+r&&y>=s.y-r&&y<=s.y+s.h+r):!s.p.some(q=>Math.hypot(q[0]-x,q[1]-y)<r));
@@ -287,7 +287,7 @@ jobs:
             deselect();tool=t;document.querySelectorAll('[data-t]').forEach(x=>x.classList.toggle('on',x.dataset.t===t));
             $('#pages').classList.toggle('hand',t==='hand');ccUpd();if(t==='hand')$('#pp').hidden=true;else if(!$('#pp').hidden)opts();
           }
-          const ccUpd=()=>$('#cc').style.background=(T[tool].c||T.pen.c);
+          const ccUpd=()=>$('#cc').style.background=((T[tool]||T.pen).c||T.pen.c);
           function pv(){
             const c=$('#pv');if(!c)return;const x=c.getContext('2d'),s=T[tool];x.setTransform(2,0,0,2,0,0);x.clearRect(0,0,c.width,c.height);
             if(tool==='tx'){x.fillStyle=s.c;x.font=Math.min(s.z,40)+'px "'+s.f+'",sans-serif';x.textBaseline='middle';x.fillText('أبجد Abc',16,27)}
