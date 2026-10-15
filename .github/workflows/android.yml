@@ -77,7 +77,8 @@ jobs:
           #ttl{flex:1;min-width:50px;border:0;background:transparent;font-weight:700;font-size:17px}
           #zl{min-width:36px;text-align:center;font-size:13px;color:var(--mu)}
           #cloud{color:#2ecc71}
-          #work{flex:1;min-height:0;display:grid;grid-template-columns:20px minmax(0,1fr);grid-template-rows:20px minmax(0,1fr);direction:ltr}
+          #mid{flex:1;min-height:0;display:flex;direction:rtl}
+          #work{flex:1;min-width:0;min-height:0;display:grid;grid-template-columns:20px minmax(0,1fr);grid-template-rows:20px minmax(0,1fr);direction:ltr}
           #rh{grid-column:2;grid-row:1;width:100%;height:20px;display:block}
           #rv{grid-column:1;grid-row:2;width:20px;height:100%;display:block}
           #ed.sp #pages{padding-bottom:130px}
@@ -93,11 +94,12 @@ jobs:
           .rl,.rr{position:absolute;top:50%;width:12px;height:30px;margin-top:-15px;border-radius:6px;background:#1c7ed6;border:2px solid #fff;cursor:ew-resize;touch-action:none}
           .rl{left:-8px}.rr{right:-8px}
           .rs{position:absolute;right:-10px;bottom:-10px;width:20px;height:20px;border-radius:50%;background:#1c7ed6;border:2px solid #fff;cursor:nwse-resize;touch-action:none}
-          #tl{position:absolute;right:8px;top:74px;z-index:6;background:var(--sf);border:1px solid var(--ln);border-radius:20px;padding:6px;display:flex;flex-direction:column;gap:4px;box-shadow:0 8px 24px #000a}
-          #tl .ib{width:44px;height:44px;border:0;background:none;color:var(--mu);border-radius:12px}
-          #tl .ib.on{background:var(--ac);color:#fff;box-shadow:0 0 14px #2f6bff88}
-          #cc{width:34px;height:34px;border-radius:50%;border:2px solid var(--mu);margin:6px auto 2px;padding:0}
-          #pp{position:absolute;right:68px;top:74px;width:min(310px,calc(100% - 82px));z-index:6;background:var(--sf);border:1px solid var(--ln);border-radius:18px;padding:14px;box-shadow:0 10px 30px #000b;display:flex;flex-direction:column;gap:10px}
+          #tl{flex:none;width:40px;z-index:6;background:var(--sf);border-left:1px solid var(--ln);padding:8px 0;display:flex;flex-direction:column;align-items:center;gap:4px;overflow-y:auto}
+          #tl .ib{width:34px;height:34px;border:0;background:none;color:var(--mu);border-radius:10px;flex:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation}
+          #tl .ib svg{width:20px;height:20px}
+          #tl .ib.on{background:var(--ac);color:#fff}
+          #cc{width:26px;height:26px;border-radius:50%;border:2px solid var(--mu);margin:8px auto 2px;padding:0;flex:none}
+          #pp{position:absolute;right:46px;top:60px;width:min(310px,calc(100% - 58px));z-index:7;background:var(--sf);border:1px solid var(--ln);border-radius:18px;padding:14px;box-shadow:0 10px 30px #000b;display:flex;flex-direction:column;gap:10px}
           .pr{display:flex;align-items:center;gap:10px}
           .pr input[type=range]{flex:1;accent-color:var(--ac)}
           .nm{min-width:4ch;text-align:center;color:var(--mu);font-size:13px}
@@ -145,14 +147,16 @@ jobs:
               <button id="cov" class="ib" data-i="layout" aria-label="الغلاف والورق" title="الغلاف والورق"></button>
               <button id="exp" class="ib" data-i="pdf" aria-label="تصدير PDF" title="تصدير PDF"></button>
             </div>
-            <div id="work"><canvas id="rh" aria-hidden="true"></canvas><canvas id="rv" aria-hidden="true"></canvas><div id="pages"></div><canvas id="gd" aria-hidden="true"></canvas></div>
-            <div id="tl">
-              <button data-t="hand" class="ib" data-i="cursor" aria-label="تحديد" title="تحديد وتمرير"></button>
-              <button data-t="pen" class="ib on" data-i="pen" aria-label="قلم" title="قلم"></button>
-              <button data-t="hl" class="ib" data-i="hl" aria-label="تمييز" title="تمييز"></button>
-              <button data-t="er" class="ib" data-i="er" aria-label="ممحاة" title="ممحاة"></button>
-              <button data-t="tx" class="ib" data-i="tx" aria-label="نص" title="نص"></button>
-              <button id="cc" aria-label="اللون" title="اللون"></button>
+            <div id="mid">
+              <div id="tl">
+                <button data-t="hand" class="ib" data-i="cursor" aria-label="تحديد" title="تحديد وتمرير"></button>
+                <button data-t="pen" class="ib on" data-i="pen" aria-label="قلم" title="قلم"></button>
+                <button data-t="hl" class="ib" data-i="hl" aria-label="تمييز" title="تمييز"></button>
+                <button data-t="er" class="ib" data-i="er" aria-label="ممحاة" title="ممحاة"></button>
+                <button data-t="tx" class="ib" data-i="tx" aria-label="نص" title="نص"></button>
+                <button id="cc" aria-label="اللون" title="اللون"></button>
+              </div>
+              <div id="work"><canvas id="rh" aria-hidden="true"></canvas><canvas id="rv" aria-hidden="true"></canvas><div id="pages"></div><canvas id="gd" aria-hidden="true"></canvas></div>
             </div>
             <div id="pp" hidden></div>
             <div id="st" hidden></div>
@@ -431,7 +435,12 @@ jobs:
           }
           document.addEventListener('keydown',e=>{
             if(!sel||box.classList.contains('ed')||/INPUT|SELECT|TEXTAREA/.test((e.target||{}).tagName||''))return;
-            if(e.key==='Delete'||e.key==='Backspace'){e.preventDefault();delBox()}
+            if(e.key==='Delete'||e.key==='Backspace'){
+              e.preventDefault();const ta=box.querySelector('textarea');
+              if(!ta.value){delBox();return}
+              snap(selI);box.classList.add('ed');ta.focus({preventScroll:true});
+              ta.value=ta.value.slice(0,-1);sel.s=ta.value;place();
+            }
           });
           function reveal(){
             if(!sel||!box||document.activeElement!==box.querySelector('textarea'))return;
@@ -453,8 +462,8 @@ jobs:
           }
           function wireBox(){
             const ta=box.querySelector('textarea'),rs=box.querySelector('.rs');let st=null,rz=null;
-            ta.onbeforeinput=e=>{if(box.classList.contains('ed'))return;if(e.inputType.startsWith('delete')){e.preventDefault();delBox()}else box.classList.add('ed')};
-            ta.onkeydown=e=>{if((e.key==='Delete'||e.key==='Backspace')&&(!box.classList.contains('ed')||(e.key==='Backspace'&&!ta.value))){e.preventDefault();delBox()}};
+            ta.onbeforeinput=e=>{if(box.classList.contains('ed'))return;snap(selI);box.classList.add('ed')};
+            ta.onkeydown=e=>{if((e.key==='Delete'||e.key==='Backspace')&&!ta.value){e.preventDefault();delBox()}};
             ta.oninput=()=>{sel.s=ta.value;place();reveal()};
             box.onpointerdown=e=>{if(e.target===rs||box.classList.contains('ed'))return;e.preventDefault();box.setPointerCapture(e.pointerId);snap(selI);st={px:e.clientX,py:e.clientY,x:sel.x,y:sel.y,m:false}};
             box.onpointermove=e=>{if(!st)return;const dx=e.clientX-st.px,dy=e.clientY-st.py;if(Math.hypot(dx,dy)>5)st.m=true;
@@ -523,11 +532,30 @@ jobs:
             catch(e){if(!/cancel|declin/i.test(String(e&&(e.message||e.code))))toast('تعذّر تصدير PDF')}
           }
 
-          document.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{
-            const t=b.dataset.t,p=$('#pp');
-            if(t===tool&&t!=='hand'){p.hidden=!p.hidden;if(!p.hidden)opts()}else{p.hidden=t==='hand';setTool(t);if(t!=='hand')opts()}
+          function posProps(b){
+            const p=$('#pp'),e=$('#ed').getBoundingClientRect(),r=b.getBoundingClientRect();
+            const max=e.height-p.offsetHeight-8;
+            p.style.top=Math.max(48,Math.min(r.top-e.top-6,max))+'px';
+          }
+          function showProps(b){
+            const t=b.dataset.t;if(t==='hand')return;
+            if(t!==tool)setTool(t);
+            $('#pp').hidden=false;opts();posProps(b);
+          }
+          document.querySelectorAll('[data-t]').forEach(b=>{
+            let tm=0,lp=false,taps=0,tt=0;
+            b.onpointerdown=()=>{lp=false;clearTimeout(tm);tm=setTimeout(()=>{lp=true;showProps(b)},450)};
+            const end=()=>clearTimeout(tm);
+            b.onpointerup=end;b.onpointerleave=end;b.onpointercancel=end;
+            b.oncontextmenu=e=>e.preventDefault();
+            b.onclick=()=>{
+              if(lp){lp=false;return}
+              $('#pp').hidden=true;setTool(b.dataset.t);
+              taps=Date.now()-tt<700?taps+1:1;tt=Date.now();
+              if(taps>=3){taps=0;showProps(b)}
+            };
           });
-          $('#cc').onclick=()=>{if(tool==='hand'||tool==='er')setTool('pen');const p=$('#pp');p.hidden=!p.hidden;if(!p.hidden)opts()};
+          $('#cc').onclick=()=>{if(tool==='hand'||tool==='er')setTool('pen');const p=$('#pp');p.hidden=!p.hidden;if(!p.hidden){opts();posProps($('#cc'))}};
           const actv=()=>document.querySelectorAll('.th[data-p]').forEach(t=>t.classList.toggle('on',+t.dataset.p===ap));
           function strip(){
             if(cur&&$('#st').hidden){$('#un').disabled=!undo.length;$('#re').disabled=!redo.length;rq();return}
