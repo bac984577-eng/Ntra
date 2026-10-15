@@ -1,4 +1,4 @@
-name: StarNote Android Build
+name: Build Najma APK
 
 on:
   push:
@@ -8,59 +8,469 @@ on:
 permissions:
   contents: write
 
-concurrency:
-  group: build-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
   build:
-    name: Build APK
     runs-on: ubuntu-latest
-    timeout-minutes: 120
-
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node.js (without cache)
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: 20
 
-      - name: Install npm dependencies
-        run: npm install --no-optional --no-audit --no-fund
-
-      - name: Build Next.js app
-        env:
-          SKIP_ENV_VALIDATION: "true"
-          NODE_ENV: production
-        run: npm run build
-
-      - name: Setup Java 17
+      - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: "17"
+          java-version: 17
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
+
+      - name: Write app (index.html)
+        run: |
+          mkdir -p www
+          cat > www/index.html <<'NAJMA_EOF'
+          <!doctype html>
+          <html lang="ar" dir="rtl">
+          <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+          <title>نجمة - دفتر ملاحظات بخط اليد</title>
+          <style>
+          :root{--bg:#0b0e17;--sf:#161a26;--tx:#e8ebf5;--mu:#8a93ab;--ac:#2f6bff;--ln:#2a3042;--rd:#ff6b6b;color-scheme:dark;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+          html{scroll-padding-top:env(safe-area-inset-top,0px)}
+          *{box-sizing:border-box}
+          html,body{height:100%;margin:0}
+          body{background:var(--bg);color:var(--tx);font:16px/1.5 system-ui,"Noto Sans Arabic",sans-serif;overscroll-behavior:none}
+          [hidden]{display:none!important}
+          button,select,input,textarea{font:inherit;color:inherit}
+          button,select{background:var(--sf);border:1px solid var(--ln);border-radius:10px;padding:6px 10px;cursor:pointer}
+          button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible,label:focus-within{outline:2px solid var(--ac);outline-offset:2px}
+          button.on{background:var(--ac);color:#fff;border-color:var(--ac)}
+          button.warn{background:var(--rd);color:#fff;border-color:var(--rd)}
+          svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;display:block}
+          .ib{display:grid;place-items:center;width:40px;height:40px;padding:0}
+          #home{height:100%;overflow:auto;padding:22px 16px 96px}
+          h1{margin:0 0 16px;font-size:26px;font-weight:700}
+          #grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:16px}
+          .card{position:relative;aspect-ratio:3/4;padding:14px;border:0;border-radius:6px 14px 14px 6px;color:#fff;text-align:start;display:flex;flex-direction:column;justify-content:flex-end;box-shadow:0 3px 10px #0006;overflow:hidden}
+          .card::before{content:"";position:absolute;inset-block:0;inset-inline-start:0;width:10px;background:#0003}
+          .card b{font-weight:700;font-size:17px;line-height:1.3;overflow-wrap:anywhere}
+          .card small{opacity:.85}
+          .empty{color:var(--mu)}
+          #fab{position:fixed;inset-inline-end:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));width:56px;height:56px;border-radius:50%;box-shadow:0 4px 14px #0006}
+          #ed{position:relative;height:100%;display:flex;flex-direction:column}
+          .top{display:flex;gap:2px;align-items:center;padding:6px 8px;background:var(--bg);border-bottom:1px solid var(--ln)}
+          .top .ib{width:34px;height:34px;background:none;border:0;border-radius:8px;color:var(--tx)}
+          .top .ib:disabled{opacity:.3}
+          .sep{width:1px;height:26px;background:var(--ln);margin-inline:4px}
+          #ttl{flex:1;min-width:50px;border:0;background:transparent;font-weight:700;font-size:17px}
+          #zl{min-width:42px;text-align:center;font-size:13px;color:var(--mu)}
+          #cloud{color:#2ecc71}
+          #pages{flex:1;overflow:auto;padding:14px 14px 130px;display:flex;flex-direction:column;gap:14px;background:#0f1220}
+          .pw{position:relative;flex:none;margin:0 auto;box-shadow:0 2px 14px #0008;border-radius:2px}
+          .pg{display:block;width:100%;aspect-ratio:210/297;height:auto;background:#fff;border-radius:2px;touch-action:none}
+          .hand .pg{touch-action:pan-x pan-y}
+          .tb{position:absolute;border:1.5px dashed #1c7ed6;touch-action:none;cursor:move;z-index:3}
+          .tb.ed{border-style:solid;cursor:text}
+          .tb textarea{display:block;width:100%;height:100%;margin:0;padding:0;border:0;background:transparent;resize:none;overflow:hidden;line-height:1.3;caret-color:#1c7ed6;outline:0;pointer-events:none}
+          .tb.ed textarea{pointer-events:auto}
+          .rs{position:absolute;right:-10px;bottom:-10px;width:20px;height:20px;border-radius:50%;background:#1c7ed6;border:2px solid #fff;cursor:nwse-resize;touch-action:none}
+          #tl{position:absolute;right:8px;top:74px;z-index:6;background:var(--sf);border:1px solid var(--ln);border-radius:20px;padding:6px;display:flex;flex-direction:column;gap:4px;box-shadow:0 8px 24px #000a}
+          #tl .ib{width:44px;height:44px;border:0;background:none;color:var(--mu);border-radius:12px}
+          #tl .ib.on{background:var(--ac);color:#fff;box-shadow:0 0 14px #2f6bff88}
+          #cc{width:34px;height:34px;border-radius:50%;border:2px solid var(--mu);margin:6px auto 2px;padding:0}
+          #pp{position:absolute;right:68px;top:74px;width:min(310px,calc(100% - 82px));z-index:6;background:var(--sf);border:1px solid var(--ln);border-radius:18px;padding:14px;box-shadow:0 10px 30px #000b;display:flex;flex-direction:column;gap:10px}
+          .pr{display:flex;align-items:center;gap:10px}
+          .pr input[type=range]{flex:1;accent-color:var(--ac)}
+          .nm{min-width:4ch;text-align:center;color:var(--mu);font-size:13px}
+          .cg{display:grid;grid-template-columns:repeat(7,1fr);gap:8px}
+          .dot{position:relative;width:28px;height:28px;border-radius:50%;padding:0;border:2px solid var(--ln);display:grid;place-items:center;cursor:pointer}
+          .cg .dot{width:100%;height:auto;aspect-ratio:1}
+          .dot svg{width:16px;height:16px;color:#fff}
+          .dot.sel{outline:2px solid var(--ac);outline-offset:2px}
+          .dot input{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer}
+          #pv{width:100%;height:54px;border-radius:10px;background:#fff}
+          #st{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:6;display:flex;gap:8px;align-items:center;background:var(--sf);border:1px solid var(--ln);border-radius:18px;padding:8px;max-width:calc(100% - 16px);overflow-x:auto;box-shadow:0 8px 24px #000a}
+          .th{position:relative;width:54px;height:76px;padding:0;border-radius:8px;border:2px solid var(--ln);overflow:hidden;background:#fff;flex:none}
+          .th.on{border-color:var(--ac)}
+          .th canvas{width:100%;height:100%;display:block}
+          .th i{position:absolute;bottom:3px;right:3px;font-style:normal;font-size:11px;background:#555c;color:#fff;border-radius:5px;padding:0 5px}
+          .th.add{border-style:dashed;background:none;color:var(--mu);display:grid;place-items:center}
+          .ov{position:fixed;inset:0;background:#000b;display:grid;place-items:center;padding:16px;z-index:8}
+          .sheet{background:var(--sf);border-radius:16px;padding:16px;width:100%;max-width:420px;display:flex;flex-direction:column;gap:12px}
+          .sheet input[type=text],.sheet select{width:100%;background:var(--bg);border:1px solid var(--ln);border-radius:10px;padding:8px 10px}
+          .row{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+          .cvs{display:flex;gap:10px;flex-wrap:wrap}
+          .cvs .dot{width:34px;height:34px}
+          #toast{position:fixed;inset-inline:16px;bottom:130px;margin:auto;max-width:360px;background:#e8ebf5;color:#12151f;border-radius:10px;padding:10px 14px;text-align:center;z-index:9}
+          </style>
+          </head>
+          <body>
+          <main id="home">
+            <h1>دفاتري</h1>
+            <div id="grid"></div>
+            <button id="fab" class="on ib" data-i="plus" aria-label="دفتر جديد" title="دفتر جديد"></button>
+          </main>
+
+          <section id="ed" hidden>
+            <div class="top">
+              <button id="back" class="ib" data-i="back" aria-label="الدفاتر" title="الدفاتر"></button><span class="sep"></span>
+              <input id="ttl" aria-label="عنوان الدفتر">
+              <span id="cloud" class="ib" data-i="cloud" title="يُحفظ تلقائياً"></span>
+              <button id="re" class="ib" data-i="re" aria-label="إعادة" title="إعادة"></button>
+              <button id="un" class="ib" data-i="un" aria-label="تراجع" title="تراجع"></button>
+              <button id="zo" class="ib" data-i="zo" aria-label="تصغير" title="تصغير"></button>
+              <span id="zl">100%</span>
+              <button id="zi" class="ib" data-i="zi" aria-label="تكبير" title="تكبير"></button>
+              <button id="cov" class="ib" data-i="layout" aria-label="الغلاف والورق" title="الغلاف والورق"></button>
+              <button id="exp" class="ib" data-i="pdf" aria-label="تصدير PDF" title="تصدير PDF"></button>
+            </div>
+            <div id="pages"></div>
+            <div id="tl">
+              <button data-t="hand" class="ib" data-i="cursor" aria-label="تحديد" title="تحديد وتمرير"></button>
+              <button data-t="pen" class="ib on" data-i="pen" aria-label="قلم" title="قلم"></button>
+              <button data-t="hl" class="ib" data-i="hl" aria-label="تمييز" title="تمييز"></button>
+              <button data-t="er" class="ib" data-i="er" aria-label="ممحاة" title="ممحاة"></button>
+              <button data-t="tx" class="ib" data-i="tx" aria-label="نص" title="نص"></button>
+              <button id="cc" aria-label="اللون" title="اللون"></button>
+            </div>
+            <div id="pp" hidden></div>
+            <div id="st"></div>
+          </section>
+
+          <div id="nd" class="ov" hidden><div class="sheet">
+            <input id="nt" type="text" aria-label="اسم الدفتر" placeholder="اسم الدفتر">
+            <div class="cvs" id="cvs" role="group" aria-label="لون الغلاف"></div>
+            <select id="ntpl" aria-label="نوع الورق"><option value="blank">ورق فارغ</option><option value="lines">ورق مسطر</option><option value="grid">مربعات</option><option value="dots">نقاط</option></select>
+            <div class="row"><button id="ndel" class="ib" data-i="trash" aria-label="حذف الدفتر" title="حذف الدفتر"></button><button id="nx" class="ib" data-i="x" aria-label="إلغاء"></button><button id="nok" class="ib on" data-i="check" aria-label="حفظ"></button></div>
+          </div></div>
+
+          <div id="toast" hidden></div>
+
+          <script>
+          const $=s=>document.querySelector(s), W=800, H=1131;
+          const P={pen:'<path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/>',
+          hl:'<path d="m9 11-6 6v3h9l3-3"/><path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"/>',
+          er:'<path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/><path d="M22 21H7"/><path d="m5 11 9 9"/>',
+          hand:'<path d="M18 11V6a2 2 0 0 0-4 0"/><path d="M14 10V4a2 2 0 0 0-4 0v2"/><path d="M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.9-6-2.3l-3.6-3.6a2 2 0 0 1 2.8-2.8L7 15"/>',
+          tx:'<path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/>',
+          un:'<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>',
+          re:'<path d="m15 14 5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/>',
+          plus:'<path d="M5 12h14"/><path d="M12 5v14"/>',back:'<path d="m9 18 6-6-6-6"/>',
+          pdf:'<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M12 18v-6"/><path d="m9 15 3 3 3-3"/>',
+          fileplus:'<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M9 15h6"/><path d="M12 12v6"/>',
+          trash:'<path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>',
+          palette:'<circle cx="13.5" cy="6.5" r=".5"/><circle cx="17.5" cy="10.5" r=".5"/><circle cx="8.5" cy="7.5" r=".5"/><circle cx="6.5" cy="12.5" r=".5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.9 0 1.5-.7 1.5-1.5 0-.4-.2-.7-.4-1-.2-.3-.4-.6-.4-1 0-.8.7-1.5 1.5-1.5H16c3.3 0 6-2.7 6-6 0-5-4.5-9-10-9Z"/>',
+          up:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/>',
+          cursor:'<path d="M4.04 4.69a.5.5 0 0 1 .65-.65l16 6.5a.5.5 0 0 1-.06.95l-6.12 1.58a2 2 0 0 0-1.44 1.43l-1.58 6.13a.5.5 0 0 1-.95.06z"/>',
+          zi:'<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/><path d="M11 8v6"/><path d="M8 11h6"/>',
+          zo:'<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/><path d="M8 11h6"/>',
+          cloud:'<path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/><path d="m9 12 2 2 4-4"/>',
+          layout:'<rect width="18" height="7" x="3" y="3" rx="1"/><rect width="9" height="7" x="3" y="14" rx="1"/><rect width="5" height="7" x="16" y="14" rx="1"/>',
+          broom:'<path d="m16 22-1-4"/><path d="M19 14a1 1 0 0 0 1-1v-1a2 2 0 0 0-2-2h-3a1 1 0 0 1-1-1V4a2 2 0 0 0-4 0v5a1 1 0 0 1-1 1H6a2 2 0 0 0-2 2v1a1 1 0 0 0 1 1"/><path d="M5 14h14l2 6.8a1 1 0 0 1-1 1.2H4a1 1 0 0 1-1-1.2z"/><path d="m8 22 1-4"/>',
+          check:'<path d="M20 6 9 17l-5-5"/>',x:'<path d="M18 6 6 18"/><path d="m6 6 12 12"/>'};
+          const ic=n=>'<svg viewBox="0 0 24 24" aria-hidden="true">'+P[n]+'</svg>';
+          document.querySelectorAll('[data-i]').forEach(b=>b.innerHTML=ic(b.dataset.i));
+
+          let S=null;try{S=JSON.parse(localStorage.getItem('najma2'))}catch(e){}
+          S=S||{notes:[],cc:[],fonts:[]};
+          const save=()=>{try{localStorage.setItem('najma2',JSON.stringify(S))}catch(e){toast('تعذّر الحفظ: مساحة التخزين ممتلئة')}if(cur){clearTimeout(save.t);save.t=setTimeout(strip,250)}};
+          const COLORS=['#1b2033','#d6336c','#3b5bdb','#2f9e44','#f08c00','#f7d84a'];
+          const COVERS=['#3b5bdb','#d6336c','#2f9e44','#e8590c','#7048e8','#0c8599','#495057','#c92a2a'];
+          const BASE=[['sans-serif','عادي'],['serif','سيريف'],['monospace','أحادي'],['cursive','يدوي']];
+          const T={pen:{c:'#1b2033',w:3,a:1},hl:{c:'#f7d84a',w:3,a:.4},er:{w:8},tx:{c:'#1b2033',z:32,f:'sans-serif'}};
+          const PAL=['#f59f00','#fd7e14','#e03131','#ffffff','#8d99ae','#4b5563','#111827','#3b82f6','#38bdf8','#06b6d4','#14b8a6','#22c55e','#84cc16','#facc15','#92400e','#fb7185','#ec4899','#c026d3','#8b5cf6','#6366f1'];
+          let Z=1;
+          let cur=null,tool='pen',undo=[],redo=[],cv=[],ap=0,dr=null,raf=0,delArm=false,nmode='new',ncv=COVERS[0];
+
+          function toast(m){const t=$('#toast');t.textContent=m;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>t.hidden=true,3000)}
+          function b64buf(d){const s=atob(d),a=new Uint8Array(s.length);for(let i=0;i<s.length;i++)a[i]=s.charCodeAt(i);return a.buffer}
+          async function loadFont(f){try{const ff=new FontFace(f.n,b64buf(f.d));await ff.load();document.fonts.add(ff);return true}catch(e){return false}}
+          S.fonts.forEach(f=>loadFont(f).then(()=>cur&&cv.forEach((_,i)=>rp(i))));
+
+          function paper(x,t){
+            x.fillStyle='#fff';x.fillRect(0,0,W,H);x.strokeStyle=x.fillStyle='#cfd6ea';x.lineWidth=1;
+            if(t==='lines')for(let y=80;y<H;y+=36){x.beginPath();x.moveTo(0,y);x.lineTo(W,y);x.stroke()}
+            if(t==='grid'){for(let y=0;y<H;y+=32){x.beginPath();x.moveTo(0,y);x.lineTo(W,y);x.stroke()}for(let i=0;i<W;i+=32){x.beginPath();x.moveTo(i,0);x.lineTo(i,H);x.stroke()}}
+            if(t==='dots')for(let y=32;y<H;y+=32)for(let i=32;i<W;i+=32)x.fillRect(i-1,y-1,2,2);
+          }
+          function stroke(x,s){
+            if(s.hid)return;
+            x.save();x.lineCap=x.lineJoin='round';
+            if(s.t==='tx'){
+              if(!s.w){s.w=s.bw||300;s.h=s.bh||s.z*1.4}
+              x.font=s.z+'px "'+s.f+'",sans-serif';x.fillStyle=s.c;x.textBaseline='top';
+              const rt=/[\u0600-\u06FF]/.test(s.s);x.direction=rt?'rtl':'ltr';x.textAlign=rt?'right':'left';
+              wrap(x,s.s,s.w).forEach((l,i)=>x.fillText(l,rt?s.x+s.w:s.x,s.y+i*s.z*1.3+s.z*.1));
+              x.restore();return;
+            }
+            const p=s.p;x.strokeStyle=x.fillStyle=s.c;x.globalAlpha=s.a||1;
+            if(s.t==='hl'){
+              x.globalAlpha=s.a||.4;x.globalCompositeOperation='multiply';x.lineWidth=s.w*4;
+              x.beginPath();x.moveTo(p[0][0],p[0][1]);if(p.length===1)x.lineTo(p[0][0]+.1,p[0][1]);
+              for(let i=1;i<p.length;i++)x.lineTo(p[i][0],p[i][1]);x.stroke();
+            }else if(p.length===1){x.beginPath();x.arc(p[0][0],p[0][1],s.w*.6,0,7);x.fill()}
+            else for(let i=1;i<p.length;i++){
+              const a=i>1?p[i-2]:p[0],b=p[i-1],c=p[i];x.lineWidth=s.w*(.6+c[2]*.8);
+              x.beginPath();x.moveTo((a[0]+b[0])/2,(a[1]+b[1])/2);x.quadraticCurveTo(b[0],b[1],(b[0]+c[0])/2,(b[1]+c[1])/2);x.stroke();
+            }
+            x.restore();
+          }
+          function wrap(x,t,w){const o=[];t.split('\n').forEach(p=>{let l='';p.split(' ').forEach(d=>{const n=l?l+' '+d:d;if(l&&x.measureText(n).width>w){o.push(l);l=d}else l=n});o.push(l)});return o}
+          const rp=i=>{const x=cv[i].getContext('2d');x.setTransform(2,0,0,2,0,0);paper(x,cur.tpl);cur.pages[i].strokes.forEach(s=>stroke(x,s))};
+
+          function home(){
+            cur=null;$('#home').hidden=false;$('#ed').hidden=true;
+            const g=$('#grid');g.innerHTML='';
+            if(!S.notes.length)g.innerHTML='<p class="empty">لا توجد دفاتر بعد. اضغط زر + لتبدأ.</p>';
+            S.notes.sort((a,b)=>b.u-a.u).forEach(n=>{
+              const d=document.createElement('button');d.className='card';d.style.background=n.cv;
+              d.innerHTML='<b></b><small></small>';d.querySelector('b').textContent=n.title;
+              d.querySelector('small').textContent=n.pages.length+' صفحة';
+              d.onclick=()=>openNote(n.id);g.append(d);
+            });
+          }
+          function openNote(id){
+            cur=S.notes.find(n=>n.id===id);undo=[];redo=[];ap=0;delArm=false;$('#ndel').classList.remove('warn');
+            cur.pages.forEach(p=>p.strokes.forEach(s=>s.hid=false));$('#home').hidden=true;$('#ed').hidden=false;$('#ttl').value=cur.title;fitZoom();buildPages();applyZoom();setTool(tool);strip();
+          }
+          function buildPages(){
+            const b=$('#pages');b.innerHTML='';cv=[];sel=null;box=null;
+            cur.pages.forEach((pg,i)=>{
+              const w=document.createElement('div');w.className='pw';w.style.width=794*Z+'px';
+              const c=document.createElement('canvas');c.className='pg';c.width=W*2;c.height=H*2;
+              const pt=e=>{const r=c.getBoundingClientRect();return[(e.clientX-r.left)/r.width*W,(e.clientY-r.top)/r.height*H,e.pointerType==='pen'?(e.pressure||.5):.5]};
+              c.onpointerdown=e=>{
+                $('#pp').hidden=true;ap=i;const q=pt(e);
+                const hit=()=>[...pg.strokes].reverse().find(s=>s.t==='tx'&&q[0]>=s.x&&q[0]<=s.x+s.w&&q[1]>=s.y&&q[1]<=s.y+s.h);
+                if(tool==='hand'){const h=hit();if(h){lt=performance.now();showBox(i,h,false)}else if(sel)deselect();actv();return}
+                e.preventDefault();
+                if(tool==='tx'){
+                  const h=hit();actv();
+                  if(h){lt=performance.now();showBox(i,h,false)}
+                  else if(sel)deselect();
+                  else{snap(i);const z=T.tx,n={t:'tx',s:'',x:Math.max(0,Math.min(q[0],W-320)),y:Math.max(0,Math.min(q[1],H-60)),w:320,h:Math.max(48,z.z*1.6),c:z.c,z:z.z,f:z.f};pg.strokes.push(n);showBox(i,n,true)}
+                  return;
+                }
+                c.setPointerCapture(e.pointerId);snap(i);dr={i,id:e.pointerId,ch:false};
+                if(tool==='er')dr.ch=erase(pg,q[0],q[1]);
+                else{dr.s={t:tool,c:T[tool].c,w:T[tool].w,a:T[tool].a,p:[q]};pg.strokes.push(dr.s)}
+                sched(i);
+              };
+              c.onpointermove=e=>{
+                if(!dr||dr.id!==e.pointerId||dr.i!==i)return;
+                (e.getCoalescedEvents?e.getCoalescedEvents():[e]).forEach(ev=>{const q=pt(ev);if(tool==='er'){if(erase(pg,q[0],q[1]))dr.ch=true}else dr.s.p.push(q)});
+                sched(i);
+              };
+              const up=e=>{if(!dr||dr.id!==e.pointerId)return;if(tool==='er'&&!dr.ch)undo.pop();dr=null;cur.u=Date.now();save()};
+              c.onpointerup=up;c.onpointercancel=up;w.append(c);b.append(w);cv.push(c);rp(i);
+            });
+          }
+          {undo.push([i,JSON.stringify(cur.pages[i].strokes)]);if(undo.length>40)undo.shift();redo=[]};
+          function erase(pg,x,y){
+            const n=pg.strokes.length,r=T.er.w*1.5+6;
+            pg.strokes=pg.strokes.filter(s=>s.t==='tx'?!(x>=s.x-r&&x<=s.x+s.w+r&&y>=s.y-r&&y<=s.y+s.h+r):!s.p.some(q=>Math.hypot(q[0]-x,q[1]-y)<r));
+            return pg.strokes.length!==n;
+          }
+          const sched=i=>{cancelAnimationFrame(raf);raf=requestAnimationFrame(()=>rp(i))};
+          function swap(a,b){const t=a.pop();if(!t)return;b.push([t[0],JSON.stringify(cur.pages[t[0]].strokes)]);cur.pages[t[0]].strokes=JSON.parse(t[1]).map(s=>(s.hid=false,s));rp(t[0]);save()}
+
+          function setTool(t){
+            deselect();tool=t;document.querySelectorAll('[data-t]').forEach(x=>x.classList.toggle('on',x.dataset.t===t));
+            $('#pages').classList.toggle('hand',t==='hand');ccUpd();if(t==='hand')$('#pp').hidden=true;else if(!$('#pp').hidden)opts();
+          }
+          const ccUpd=()=>$('#cc').style.background=(T[tool].c||T.pen.c);
+          function pv(){
+            const c=$('#pv');if(!c)return;const x=c.getContext('2d'),s=T[tool];x.setTransform(2,0,0,2,0,0);x.clearRect(0,0,c.width,c.height);
+            if(tool==='tx'){x.fillStyle=s.c;x.font=Math.min(s.z,40)+'px "'+s.f+'",sans-serif';x.textBaseline='middle';x.fillText('أبجد Abc',16,27)}
+            else if(tool==='er'){x.strokeStyle='#8a93ab';x.lineWidth=2;x.beginPath();x.arc(140,27,Math.min(24,s.w*.8+4),0,7);x.stroke()}
+            else{const p=[];for(let i=0;i<40;i++)p.push([20+i*6.5,27+Math.sin(i/4)*12,.5]);stroke(x,{t:tool,c:s.c,w:s.w,a:s.a,p})}
+          }
+          function opts(){
+            const o=$('#pp'),s=T[tool];o.innerHTML='';if(tool==='hand'){o.hidden=true;return}
+            const h=document.createElement('div');h.style.cssText='color:var(--mu);font-size:14px';h.textContent={pen:'سمك القلم',hl:'سمك المحدد',er:'حجم الممحاة',tx:'حجم الخط'}[tool];o.append(h);
+            const sl=(k,mn,mx,lab,f)=>{const r=document.createElement('div'),i=document.createElement('input'),n=document.createElement('span');r.className='pr';n.className='nm';
+              Object.assign(i,{type:'range',min:mn,max:mx,step:k==='a'?.05:1,value:s[k]});i.setAttribute('aria-label',lab);n.textContent=f(s[k]);
+              i.oninput=()=>{s[k]=+i.value;n.textContent=f(s[k]);applyTx();pv()};r.append(i,n);o.append(r)};
+            const id=v=>v,pc=v=>Math.round(v*100)+'%';
+            if(tool==='tx')sl('z',10,120,'حجم الخط',id);else if(tool==='er')sl('w',2,40,'حجم الممحاة',id);
+            else{sl('w',1,24,'السمك',id);sl('a',.1,1,'الشفافية',pc)}
+            if(tool!=='er'){
+              const g=document.createElement('div');g.className='cg';
+              const l=document.createElement('label');l.className='dot';l.style.background='conic-gradient(#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00)';l.title='لون إضافي';l.innerHTML=ic('plus')+'<input type="color" aria-label="لون إضافي">';
+              const pick=c=>{s.c=c;ccUpd();opts();applyTx()};
+              l.querySelector('input').onchange=e=>{const c=e.target.value;if(!PAL.includes(c)&&!S.cc.includes(c)){S.cc.push(c);if(S.cc.length>7)S.cc.shift();save()}pick(c)};
+              g.append(l);
+              [...PAL,...S.cc].forEach(c=>{const d=document.createElement('button');d.className='dot'+(s.c===c?' sel':'');d.style.background=c;d.setAttribute('aria-label','لون '+c);d.onclick=()=>pick(c);g.append(d)});
+              o.append(g);
+            }
+            if(tool==='tx'){
+              const r=document.createElement('div');r.className='pr';
+              const f=document.createElement('select');f.setAttribute('aria-label','الخط');f.style.flex='1';
+              [...BASE,...S.fonts.map(x=>[x.n,x.n])].forEach(([v,l])=>{const op=new Option(l,v);op.selected=v===s.f;f.add(op)});
+              f.onchange=()=>{s.f=f.value;applyTx();pv()};
+              const u=document.createElement('label');u.className='ib';u.style.cssText='border:1px solid var(--ln);border-radius:10px;position:relative;cursor:pointer';u.title='استيراد خط';
+              u.innerHTML=ic('up')+'<input type="file" accept=".ttf,.otf,.woff,.woff2" style="position:absolute;inset:0;opacity:0;cursor:pointer" aria-label="استيراد خط">';
+              u.querySelector('input').onchange=impFont;r.append(f,u);o.append(r);
+            }
+            const c=document.createElement('canvas');c.id='pv';c.width=560;c.height=108;o.append(c);pv();
+          }
+          function impFont(e){
+            const file=e.target.files[0];if(!file)return;const fr=new FileReader();
+            fr.onload=async()=>{
+              const f={n:file.name.replace(/\.[^.]+$/,'').slice(0,24),d:String(fr.result).split(',')[1]};
+              if(!await loadFont(f)){toast('تعذّر قراءة ملف الخط');return}
+              S.fonts=S.fonts.filter(x=>x.n!==f.n);S.fonts.push(f);save();T.tx.f=f.n;opts();applyTx();cv.forEach((_,i)=>rp(i));toast('تمت إضافة الخط: '+f.n);
+            };fr.readAsDataURL(file);
+          }
+
+          let sel=null,selI=0,lt=0,box=null;
+          const ks=()=>cv[selI].clientWidth/W;
+          function place(){const k=ks(),ta=box.querySelector('textarea');
+            Object.assign(box.style,{left:sel.x*k+'px',top:sel.y*k+'px',width:sel.w*k+'px',height:sel.h*k+'px'});
+            Object.assign(ta.style,{fontFamily:'"'+sel.f+'",sans-serif',fontSize:sel.z*k+'px',color:sel.c})}
+          function applyTx(){if(tool==='tx'&&sel){Object.assign(sel,{c:T.tx.c,z:T.tx.z,f:T.tx.f});place()}}
+          function deselect(){
+            if(!sel)return;const s=sel,i=selI;
+            if(box.classList.contains('ed'))s.s=box.querySelector('textarea').value;
+            s.hid=false;box.remove();box=null;sel=null;
+            if(!s.s.trim())cur.pages[i].strokes=cur.pages[i].strokes.filter(x=>x!==s);
+            rp(i);cur.u=Date.now();save();
+          }
+          function startEdit(){const ta=box.querySelector('textarea');box.classList.add('ed');ta.readOnly=false;ta.focus();ta.setSelectionRange(ta.value.length,ta.value.length)}
+          function showBox(i,s,edit){
+            if(sel&&sel!==s)deselect();
+            if(!sel){sel=s;selI=i;s.hid=true;rp(i);box=document.createElement('div');box.className='tb';
+              box.innerHTML='<textarea dir="auto" readonly aria-label="النص"></textarea><div class="rs"></div>';
+              cv[i].parentNode.append(box);wireBox()}
+            box.querySelector('textarea').value=s.s;place();if(edit)startEdit();
+          }
+          function wireBox(){
+            const ta=box.querySelector('textarea'),rs=box.querySelector('.rs');let st=null,rz=null;
+            ta.oninput=()=>{sel.s=ta.value;if(ta.scrollHeight>ta.clientHeight+1){sel.h+=ta.scrollHeight/ks()-ta.clientHeight/ks()+2;place()}};
+            box.onpointerdown=e=>{if(e.target===rs||box.classList.contains('ed'))return;e.preventDefault();box.setPointerCapture(e.pointerId);snap(selI);st={px:e.clientX,py:e.clientY,x:sel.x,y:sel.y,m:false}};
+            box.onpointermove=e=>{if(!st)return;const dx=e.clientX-st.px,dy=e.clientY-st.py;if(Math.hypot(dx,dy)>5)st.m=true;
+              if(st.m){const k=ks();sel.x=Math.max(0,Math.min(W-sel.w,st.x+dx/k));sel.y=Math.max(0,Math.min(H-sel.h,st.y+dy/k));place()}};
+            box.onpointerup=()=>{if(!st)return;const m=st.m;st=null;
+              if(m){save();return}undo.pop();const n=performance.now();if(n-lt<450)startEdit();else lt=n};
+            rs.onpointerdown=e=>{e.preventDefault();e.stopPropagation();rs.setPointerCapture(e.pointerId);snap(selI);rz={px:e.clientX,py:e.clientY,w:sel.w,h:sel.h}};
+            rs.onpointermove=e=>{if(!rz)return;const k=ks();sel.w=Math.max(60,Math.min(W-sel.x,rz.w+(e.clientX-rz.px)/k));sel.h=Math.max(30,Math.min(H-sel.y,rz.h+(e.clientY-rz.py)/k));place()};
+            rs.onpointerup=()=>{if(rz){rz=null;save()}};
+          }
+
+          function noteDlg(mode){
+            nmode=mode;const n=mode==='edit'?cur:null;ncv=n?n.cv:COVERS[0];
+            $('#nt').value=n?n.title:'';$('#ntpl').value=n?n.tpl:'lines';$('#nd').hidden=false;$('#ndel').hidden=mode==='new';
+            const c=$('#cvs');c.innerHTML='';
+            COVERS.forEach(v=>{const d=document.createElement('button');d.className='dot'+(v===ncv?' sel':'');d.style.background=v;d.setAttribute('aria-label','غلاف '+v);
+              d.onclick=()=>{ncv=v;c.querySelectorAll('.dot').forEach(x=>x.classList.toggle('sel',x===d))};c.append(d)});
+          }
+          $('#nx').onclick=()=>$('#nd').hidden=true;
+          $('#nok').onclick=()=>{
+            const t=$('#nt').value.trim()||'دفتر بلا عنوان';$('#nd').hidden=true;
+            if(nmode==='new'){const n={id:Math.random().toString(36).slice(2,9),title:t,cv:ncv,tpl:$('#ntpl').value,pages:[{strokes:[]}],u:Date.now()};S.notes.push(n);save();openNote(n.id)}
+            else{cur.title=t;cur.cv=ncv;cur.tpl=$('#ntpl').value;$('#ttl').value=t;cv.forEach((_,i)=>rp(i));save()}
+          };
+
+          async function deliver(blob,name){
+            const C=window.Capacitor&&window.Capacitor.Plugins;
+            if(C&&C.Filesystem&&C.Share){
+              const d=await new Promise(r=>{const f=new FileReader();f.onload=()=>r(String(f.result).split(',')[1]);f.readAsDataURL(blob)});
+              const w=await C.Filesystem.writeFile({path:name,data:d,directory:'CACHE'});
+              await C.Share.share({title:name,url:w.uri,dialogTitle:'حفظ أو مشاركة الملف'});return;
+            }
+            const dl=window.claude&&await window.claude.use('downloads').catch(()=>null);
+            if(dl){await dl.save({filename:name,data:blob});return}
+            const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();
+          }
+          async function exportPdf(){
+            deselect();
+            const enc=new TextEncoder(),parts=[],off=[];let len=0;
+            const add=d=>{const b=typeof d==='string'?enc.encode(d):d;parts.push(b);len+=b.length};
+            const N=cur.pages.length,tot=2+3*N;
+            add('%PDF-1.4\n');off[1]=len;add('1 0 obj\n<</Type/Catalog/Pages 2 0 R>>\nendobj\n');
+            off[2]=len;add('2 0 obj\n<</Type/Pages/Count '+N+'/Kids['+cur.pages.map((_,k)=>(3+3*k)+' 0 R').join(' ')+']>>\nendobj\n');
+            cur.pages.forEach((_,k)=>{
+              const j=new Uint8Array(b64buf(cv[k].toDataURL('image/jpeg',.92).split(',')[1])),c='q 595.28 0 0 841.89 0 0 cm /Im0 Do Q';
+              off[3+3*k]=len;add((3+3*k)+' 0 obj\n<</Type/Page/Parent 2 0 R/MediaBox[0 0 595.28 841.89]/Contents '+(4+3*k)+' 0 R/Resources<</XObject<</Im0 '+(5+3*k)+' 0 R>>>>>>\nendobj\n');
+              off[4+3*k]=len;add((4+3*k)+' 0 obj\n<</Length '+c.length+'>>\nstream\n'+c+'\nendstream\nendobj\n');
+              off[5+3*k]=len;add((5+3*k)+' 0 obj\n<</Type/XObject/Subtype/Image/Width '+W*2+'/Height '+H*2+'/ColorSpace/DeviceRGB/BitsPerComponent 8/Filter/DCTDecode/Length '+j.length+'>>\nstream\n');add(j);add('\nendstream\nendobj\n');
+            });
+            const xr=len;let x='xref\n0 '+(tot+1)+'\n0000000000 65535 f \n';
+            for(let i=1;i<=tot;i++)x+=String(off[i]).padStart(10,'0')+' 00000 n \n';
+            add(x+'trailer\n<</Size '+(tot+1)+'/Root 1 0 R>>\nstartxref\n'+xr+'\n%%EOF');
+            try{await deliver(new Blob(parts,{type:'application/pdf'}),(cur.title.replace(/[\\/:*?"<>|]/g,'')||'notebook')+'.pdf');toast('تم تجهيز ملف PDF')}
+            catch(e){if(!/cancel|declin/i.test(String(e&&(e.message||e.code))))toast('تعذّر تصدير PDF')}
+          }
+
+          document.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{
+            const t=b.dataset.t,p=$('#pp');
+            if(t===tool&&t!=='hand'){p.hidden=!p.hidden;if(!p.hidden)opts()}else{p.hidden=t==='hand';setTool(t);if(t!=='hand')opts()}
+          });
+          $('#cc').onclick=()=>{if(tool==='hand'||tool==='er')setTool('pen');const p=$('#pp');p.hidden=!p.hidden;if(!p.hidden)opts()};
+          const actv=()=>document.querySelectorAll('.th[data-p]').forEach(t=>t.classList.toggle('on',+t.dataset.p===ap));
+          function strip(){
+            if(!cur)return;const s=$('#st');s.innerHTML='';
+            const cl=document.createElement('button');cl.className='ib';cl.style.cssText='border:1px dashed var(--ln);height:76px';cl.innerHTML=ic('broom');cl.setAttribute('aria-label','مسح الصفحة');cl.title='مسح الصفحة';
+            cl.onclick=()=>{deselect();snap(ap);cur.pages[ap].strokes=[];rp(ap);save()};s.append(cl);
+            cur.pages.forEach((pg,i)=>{
+              const t=document.createElement('button');t.className='th';t.dataset.p=i;t.setAttribute('aria-label','صفحة '+(i+1));
+              t.innerHTML='<canvas width="108" height="152"></canvas><i>'+(i+1)+'</i>';
+              const x=t.querySelector('canvas').getContext('2d');x.setTransform(108/W,0,0,108/W,0,0);paper(x,cur.tpl);pg.strokes.forEach(q=>stroke(x,q));
+              t.onclick=()=>{ap=i;cv[i].parentNode.scrollIntoView({behavior:'smooth',block:'start'});actv()};s.append(t);
+            });
+            const a=document.createElement('button');a.className='th add';a.innerHTML=ic('plus');a.setAttribute('aria-label','صفحة جديدة');a.onclick=addPage;s.append(a);
+            $('#un').disabled=!undo.length;$('#re').disabled=!redo.length;actv();
+          }
+          function addPage(){deselect();cur.pages.push({strokes:[]});buildPages();ap=cur.pages.length-1;save();const p=$('#pages');setTimeout(()=>p.scrollTo({top:p.scrollHeight,behavior:'smooth'}),50)}
+          function fitZoom(){Z=Math.max(.3,Math.min(1.2,($('#pages').clientWidth-28)/794))}
+          function applyZoom(){document.querySelectorAll('.pw').forEach(w=>w.style.width=794*Z+'px');$('#zl').textContent=Math.round(Z*100)+'%';if(sel)place()}
+          $('#zi').onclick=()=>{Z=Math.min(3,Z+.1);applyZoom()};$('#zo').onclick=()=>{Z=Math.max(.3,Z-.1);applyZoom()};
+
+          $('#un').onclick=()=>{deselect();swap(undo,redo)};$('#re').onclick=()=>{deselect();swap(redo,undo)};
+          $('#ttl').oninput=e=>{cur.title=e.target.value||'دفتر بلا عنوان';save()};
+          $('#back').onclick=()=>{deselect();save();home()};
+          $('#cov').onclick=()=>noteDlg('edit');$('#fab').onclick=()=>noteDlg('new');$('#exp').onclick=exportPdf;
+          $('#ndel').onclick=()=>{
+            const d=$('#ndel');
+            if(!d.classList.contains('warn')){d.classList.add('warn');toast('اضغط مرة أخرى لتأكيد حذف الدفتر');setTimeout(()=>d.classList.remove('warn'),3000);return}
+            const n=cur;cur=null;S.notes=S.notes.filter(x=>x!==n);save();$('#nd').hidden=true;home();
+
+          };
+          home();
+          </script>
+          </body>
+          </html>
+          NAJMA_EOF
+
+      - name: Create Capacitor project
+        run: |
+          npm init -y
+          npm install @capacitor/core@6 @capacitor/cli@6 @capacitor/android@6 @capacitor/filesystem@6 @capacitor/share@6
+          npx cap init "نجمة" com.najma.notes --web-dir=www
+          npx cap add android
+          npx cap sync android
+
+      - name: Build debug APK
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Upload APK as artifact
+        uses: actions/upload-artifact@v4
         with:
-          api-level: 34
+          name: najma-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
 
-      - name: Setup Capacitor
-        run: |
-          npm install -g @capacitor/cli
-          npm install --save-dev @capacitor/cli @capacitor/core @capacitor/android
-
-      - name: Create Capacitor config
-        run: |
-          echo '{
-            "appId": "com.starnote.app",
-            "appName": "StarNote",
-            "webDir": ".next"
-          }' > capacitor.config.json
-
-      - name: Init Capacitor
-        run: npx cap init --web-dir .next || true
-
-      - name: Add Android platform
+      - name: Publish APK in Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ github.run_number }}
+          name: Najma v${{ github.run_number }}
+          files: android/app/build/outputs/apk/debug/app-debug.apk
