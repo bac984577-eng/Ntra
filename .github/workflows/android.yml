@@ -162,6 +162,11 @@ jobs:
           .bds .tp{padding:4px 4px 6px;border-radius:11px;gap:4px}
           .bds .tp span{font-size:11px}
           .bds .tp .ck{width:17px;height:17px;top:-6px}
+          .mrow{display:flex;gap:14px;align-items:center;justify-content:space-between}
+          .mc{flex:1;display:flex;flex-direction:column;gap:8px}
+          .mc input{width:64px;text-align:center;background:var(--bg);border:1px solid var(--ln);border-radius:10px;padding:6px}
+          #nbp{width:104px;height:auto;flex:none;border:1px solid var(--ln);border-radius:3px;box-shadow:0 4px 10px #1f243022;background:#fff}
+          #nscope button{flex:1}
           #toast{position:fixed;inset-inline:16px;bottom:130px;margin:auto;max-width:360px;background:#1f2430;color:#fff;border-radius:10px;padding:10px 14px;text-align:center;z-index:9}
           </style>
           </head>
@@ -208,6 +213,7 @@ jobs:
               <button id="pnt" aria-label="انتقال إلى صفحة" title="انتقال إلى صفحة">1 / 1</button>
               <button id="pnn" data-i="cd" aria-label="الصفحة التالية" title="الصفحة التالية"></button>
               <button id="pnd" data-i="trash" aria-label="حذف الصفحة الحالية" title="حذف الصفحة الحالية"></button>
+              <button id="pns" data-i="sliders" aria-label="خصائص الصفحة" title="خصائص الصفحة"></button>
             </div>
             <div id="pp" hidden></div>
             <div id="st" hidden></div>
@@ -215,16 +221,26 @@ jobs:
 
           <div id="nd" class="ov" hidden><div class="sheet">
             <div class="ndt" id="ndt">دفتر جديد</div>
-            <input id="nt" type="text" aria-label="اسم الدفتر" placeholder="اسم الدفتر">
-            <div class="lb">لون الغلاف</div>
-            <div class="cvs" id="cvs" role="group" aria-label="لون الغلاف"></div>
+            <div id="nscope" class="row" hidden><button data-s="one" class="on">هذه الصفحة فقط</button><button data-s="all">كل الصفحات</button></div>
+            <div id="nmeta" style="display:flex;flex-direction:column;gap:12px">
+              <input id="nt" type="text" aria-label="اسم الدفتر" placeholder="اسم الدفتر">
+              <div class="lb">لون الغلاف</div>
+              <div class="cvs" id="cvs" role="group" aria-label="لون الغلاف"></div>
+            </div>
             <div class="lb">نوع الورق</div>
             <input id="ntpl" type="hidden" value="lines">
             <div class="tpls" id="tpls" role="radiogroup" aria-label="نوع الورق"></div>
-            <div class="lb">حدود الصفحة (هامش 2 سم)</div>
+            <div class="lb">حدود الصفحة</div>
             <input id="nbd" type="hidden" value="none"><input id="nbc" type="hidden" value="#1b2033">
             <div class="tpls bds" id="bds" role="radiogroup" aria-label="نوع الحدود"></div>
             <div class="cvs" id="bcs" role="group" aria-label="لون الحدود"></div>
+            <div class="mrow" id="nmr">
+              <div class="mc">
+                <div class="lb">هامش الحدود عن حافة الورقة (سم)</div>
+                <div class="pr"><button id="nbup" type="button" class="ib" aria-label="زيادة">+</button><input id="nbv" type="number" min="0" max="8" step="0.1" inputmode="decimal" aria-label="هامش الحدود بالسنتيمتر"><button id="nbdn" type="button" class="ib" aria-label="إنقاص">−</button></div>
+              </div>
+              <canvas id="nbp" width="252" height="356" aria-hidden="true"></canvas>
+            </div>
             <button id="npin" hidden style="display:flex;gap:8px;align-items:center;justify-content:center"><span data-i="pin" style="display:grid"></span>إضافة اختصار للشاشة الرئيسية</button>
             <div class="row"><button id="ndel" class="ib" data-i="trash" aria-label="حذف الدفتر" title="حذف الدفتر"></button><button id="nx" class="ib" data-i="x" aria-label="إلغاء"></button><button id="nok" class="ib on" data-i="check" aria-label="حفظ"></button></div>
           </div></div>
@@ -272,7 +288,7 @@ jobs:
           layers:'<path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/>',
           star:'<path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z"/>',book:'<path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/>',search:'<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
           cu:'<path d="m18 15-6-6-6 6"/>',cd:'<path d="m6 9 6 6 6-6"/>',
-          check:'<path d="M20 6 9 17l-5-5"/>',x:'<path d="M18 6 6 18"/><path d="m6 6 12 12"/>'};
+          sliders:'<path d="M4 21v-7"/><path d="M4 10V3"/><path d="M12 21v-9"/><path d="M12 8V3"/><path d="M20 21v-5"/><path d="M20 12V3"/><path d="M1 14h6"/><path d="M9 8h6"/><path d="M17 16h6"/>',check:'<path d="M20 6 9 17l-5-5"/>',x:'<path d="M18 6 6 18"/><path d="m6 6 12 12"/>'};
           const ic=n=>'<svg viewBox="0 0 24 24" aria-hidden="true">'+P[n]+'</svg>';
           document.querySelectorAll('[data-i]').forEach(b=>b.innerHTML=ic(b.dataset.i));
 
@@ -321,7 +337,7 @@ jobs:
           const BORDERS=[['none','بلا'],['solid','خط'],['thick','سميك'],['double','مزدوج'],['dashed','متقطع'],['dotted','منقّط'],['round','دائري'],['corner','زوايا'],['classic','كلاسيك']];
           const BCOL=['#1b2033','#4b5563','#3b5bdb','#d6336c','#2f9e44','#c2662d','#b8860b'];
           function drawBorder(x,b,k){
-            k=k||1;const m=76.2,X=m,Y=m,w=W-2*m,h=H-2*m;
+            k=k||1;const m=(b.m==null?2:b.m)*W/21,X=m,Y=m,w=W-2*m,h=H-2*m;
             x.save();x.strokeStyle=x.fillStyle=b.c;x.lineJoin='miter';x.lineCap='butt';x.setLineDash([]);x.globalAlpha=1;x.globalCompositeOperation='source-over';
             const R=(a,c,d,e)=>{x.beginPath();x.rect(a,c,d,e);x.stroke()};
             const RR=(a,c,d,e,r)=>{x.beginPath();x.moveTo(a+r,c);x.arcTo(a+d,c,a+d,c+e,r);x.arcTo(a+d,c+e,a,c+e,r);x.arcTo(a,c+e,a,c,r);x.arcTo(a,c,a+d,c,r);x.closePath();x.stroke()};
@@ -337,28 +353,29 @@ jobs:
             }
             x.restore();
           }
-          const bdr=x=>{if(cur&&cur.bd&&cur.bd.t&&cur.bd.t!=='none')drawBorder(x,cur.bd)};
-          const bdVal=()=>{const t=$('#nbd').value;return t==='none'?undefined:{t,c:$('#nbc').value}};
+          const ptpl=pg=>pg.tpl||cur.tpl, pbd=pg=>pg.bd||cur.bd;
+          const bdr=(x,b)=>{if(b&&b.t&&b.t!=='none')drawBorder(x,b)};
+          const bdVal=()=>{const t=$('#nbd').value;return t==='none'?undefined:{t,c:$('#nbc').value,m:getM()}};
           function bdRender(){
-            const g=$('#bds'),v=$('#nbd').value,col=$('#nbc').value,cs=$('#bcs');g.innerHTML='';cs.innerHTML='';cs.hidden=v==='none';
+            const g=$('#bds'),v=$('#nbd').value,col=$('#nbc').value,cs=$('#bcs');g.innerHTML='';cs.innerHTML='';cs.hidden=v==='none';$('#nmr').hidden=v==='none';setTimeout(nprev);
             BORDERS.forEach(([k,l])=>{
               const b=document.createElement('button');b.type='button';b.className='tp'+(k===v?' sel':'');b.setAttribute('role','radio');b.setAttribute('aria-checked',k===v);
               const c=document.createElement('canvas');c.width=160;c.height=224;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,160,224);
-              x.setTransform(160/W,0,0,160/W,0,0);if(k!=='none')drawBorder(x,{t:k,c:col==='#ffffff'?'#1b2033':col},2.6);
+              x.setTransform(160/W,0,0,160/W,0,0);if(k!=='none')drawBorder(x,{t:k,c:col==='#ffffff'?'#1b2033':col,m:getM()},2.6);
               b.append(c);const t=document.createElement('span');t.textContent=l;b.append(t);
               if(k===v){const ck=document.createElement('i');ck.className='ck';ck.innerHTML=ic('check');b.append(ck)}
               b.onclick=()=>{$('#nbd').value=k;bdRender()};g.append(b);
             });
             BCOL.forEach(c=>{const d=document.createElement('button');d.type='button';d.className='dot'+(c===col?' sel':'');d.style.background=c;d.setAttribute('aria-label','لون '+c);d.style.width=d.style.height='30px';d.onclick=()=>{$('#nbc').value=c;bdRender()};cs.append(d)});
           }
-          function paper(x,t,bg){
+          function paper(x,t,bg,b){
             x.fillStyle='#fff';x.fillRect(0,0,W,H);
-            if(bg){const k=Math.min(W/bg.naturalWidth,H/bg.naturalHeight);x.drawImage(bg,(W-bg.naturalWidth*k)/2,(H-bg.naturalHeight*k)/2,bg.naturalWidth*k,bg.naturalHeight*k);bdr(x);return}
+            if(bg){const k=Math.min(W/bg.naturalWidth,H/bg.naturalHeight);x.drawImage(bg,(W-bg.naturalWidth*k)/2,(H-bg.naturalHeight*k)/2,bg.naturalWidth*k,bg.naturalHeight*k);bdr(x,b);return}
             x.strokeStyle=x.fillStyle='#cfd6ea';x.lineWidth=1;
             if(t==='lines')for(let y=80;y<H;y+=36){x.beginPath();x.moveTo(0,y);x.lineTo(W,y);x.stroke()}
             if(t==='grid'){for(let y=0;y<H;y+=32){x.beginPath();x.moveTo(0,y);x.lineTo(W,y);x.stroke()}for(let i=0;i<W;i+=32){x.beginPath();x.moveTo(i,0);x.lineTo(i,H);x.stroke()}}
             if(t==='dots')for(let y=32;y<H;y+=32)for(let i=32;i<W;i+=32)x.fillRect(i-1,y-1,2,2);
-            bdr(x);
+            bdr(x,b);
           }
           function stroke(x,s){
             if(s.hid)return;
@@ -385,7 +402,7 @@ jobs:
           function wrap(x,t,w){const o=[];t.split('\n').forEach(p=>{let l='';p.split(' ').forEach(d=>{const n=l?l+' '+d:d;if(l&&x.measureText(n).width>w){o.push(l);l=d}else l=n});o.push(l)});return o}
           const gctx=c=>c.getContext('2d',{alpha:false,desynchronized:true});
           const lc=document.createElement('canvas');let lcPage=-1,io=null;
-          const rp=i=>{const c=cv[i];if(!c||!c._on)return;if(i===lcPage)lcPage=-1;const x=gctx(c);x.setTransform(2,0,0,2,0,0);paper(x,cur.tpl,bgFor(cur.pages[i]));cur.pages[i].strokes.forEach(s=>stroke(x,s))};
+          const rp=i=>{const c=cv[i];if(!c||!c._on)return;if(i===lcPage)lcPage=-1;const x=gctx(c);x.setTransform(2,0,0,2,0,0);paper(x,ptpl(cur.pages[i]),bgFor(cur.pages[i]),pbd(cur.pages[i]));cur.pages[i].strokes.forEach(s=>stroke(x,s))};
           function act(i,on){
             const c=cv[i];if(!c||c._on===on)return;c._on=on;
             if(on){c.width=W*2;c.height=H*2;rp(i)}
@@ -393,7 +410,7 @@ jobs:
           }
           function lf(i){
             const c=cv[i];if(!c||!c._on||!dr||!dr.s)return;
-            if(lcPage!==i){lc.width=W*2;lc.height=H*2;const y=gctx(lc);y.setTransform(2,0,0,2,0,0);paper(y,cur.tpl,bgFor(cur.pages[i]));cur.pages[i].strokes.forEach(s=>{if(s!==dr.s)stroke(y,s)});lcPage=i}
+            if(lcPage!==i){lc.width=W*2;lc.height=H*2;const y=gctx(lc);y.setTransform(2,0,0,2,0,0);paper(y,ptpl(cur.pages[i]),bgFor(cur.pages[i]),pbd(cur.pages[i]));cur.pages[i].strokes.forEach(s=>{if(s!==dr.s)stroke(y,s)});lcPage=i}
             const x=gctx(c);x.setTransform(1,0,0,1,0,0);x.drawImage(lc,0,0);x.setTransform(2,0,0,2,0,0);stroke(x,dr.s);
           }
           const simp=p=>p.map(q=>[Math.round(q[0]*10)/10,Math.round(q[1]*10)/10,Math.round(q[2]*100)/100]);
@@ -602,21 +619,56 @@ jobs:
               const c=document.createElement('canvas');c.width=160;c.height=224;tplPrev(c.getContext('2d'),k,160,224);b.append(c);
               const t=document.createElement('span');t.textContent=l;b.append(t);
               if(k===v){const ck=document.createElement('i');ck.className='ck';ck.innerHTML=ic('check');b.append(ck)}
-              b.onclick=()=>{$('#ntpl').value=k;tplRender()};g.append(b);
+              b.onclick=()=>{$('#ntpl').value=k;tplRender();nprev()};g.append(b);
             });
           }
+          let nscope='one';
+          const fm=v=>(Math.round(v*10)/10).toFixed(1);
+          const getM=()=>{const n=parseFloat($('#nbv').value);return isNaN(n)?2:Math.max(0,Math.min(8,Math.round(n*10)/10))};
+          const setM=v=>{$('#nbv').value=fm(Math.max(0,Math.min(8,v)));bdRender()};
+          function nprev(){
+            const c=$('#nbp'),x=c.getContext('2d'),k=c.width/W,t=$('#nbd').value,m=getM();
+            x.setTransform(1,0,0,1,0,0);x.clearRect(0,0,c.width,c.height);
+            x.setTransform(k,0,0,k,0,0);paper(x,$('#ntpl').value,null,null);
+            if(t!=='none')drawBorder(x,{t,c:$('#nbc').value,m},1.8);
+            x.setTransform(1,0,0,1,0,0);
+            if(t!=='none'){const mp=m*W/21*k;x.strokeStyle=x.fillStyle='#e5484d';x.lineWidth=1.2;x.beginPath();x.moveTo(c.width/2,0);x.lineTo(c.width/2,mp);x.stroke();x.font='bold 12px system-ui';x.textAlign='left';x.fillText(fm(m)+' سم',c.width/2+5,Math.max(12,mp/2+4))}
+          }
+          const scopeUpd=()=>document.querySelectorAll('#nscope [data-s]').forEach(b=>b.classList.toggle('on',b.dataset.s===nscope));
+          document.querySelectorAll('#nscope [data-s]').forEach(b=>b.onclick=()=>{nscope=b.dataset.s;scopeUpd()});
+          [['#nbdn',-.1],['#nbup',.1]].forEach(([s,d])=>{
+            const b=$(s);let t=0,iv=0;const stop=()=>{clearTimeout(t);clearInterval(iv)};
+            const step=()=>setM(Math.round((getM()+d)*10)/10);
+            b.onpointerdown=e=>{e.preventDefault();stop();step();t=setTimeout(()=>{iv=setInterval(step,70)},400)};
+            b.onpointerup=b.onpointerleave=b.onpointercancel=stop;
+            b.onclick=e=>{if(e.detail===0)step()};
+            b.oncontextmenu=e=>e.preventDefault();
+          });
+          $('#nbv').oninput=()=>bdRender();
+          $('#nbv').onchange=()=>setM(getM());
           function noteDlg(mode){
-            nmode=mode;const n=mode==='edit'?cur:null;ncv=n?n.cv:COVERS[0];
-            $('#nt').value=n?n.title:'';$('#ntpl').value=n&&n.tpl?n.tpl:'lines';$('#ndt').textContent=n?'إعدادات الدفتر':'دفتر جديد';tplRender();$('#nbd').value=n&&n.bd?n.bd.t:'none';$('#nbc').value=n&&n.bd?n.bd.c:BCOL[0];bdRender();$('#nd').hidden=false;$('#ndel').hidden=mode==='new';$('#npin').hidden=mode==='new';
+            nmode=mode;const pg=mode==='page'?cur.pages[ap]:null,n=mode==='edit'?cur:pg?{tpl:ptpl(pg),bd:pbd(pg)}:null;ncv=mode==='edit'?cur.cv:COVERS[0];
+            $('#nt').value=mode==='edit'?cur.title:'';$('#ntpl').value=n&&n.tpl?n.tpl:'lines';
+            $('#ndt').textContent=mode==='new'?'دفتر جديد':mode==='page'?'خصائص الصفحة '+(ap+1):'إعدادات الدفتر';
+            const bd=n&&n.bd&&n.bd.t&&n.bd.t!=='none'?n.bd:null;
+            $('#nbd').value=bd?bd.t:'none';$('#nbc').value=bd?bd.c:BCOL[0];$('#nbv').value=fm(bd&&bd.m!=null?bd.m:2);
+            nscope='one';scopeUpd();$('#nscope').hidden=mode!=='page';$('#nmeta').hidden=mode==='page';
+            tplRender();bdRender();$('#nd').hidden=false;$('#ndel').hidden=mode!=='edit';$('#npin').hidden=mode!=='edit';
             const c=$('#cvs');c.innerHTML='';
             COVERS.forEach(v=>{const d=document.createElement('button');d.className='dot'+(v===ncv?' sel':'');d.style.background=v;d.setAttribute('aria-label','غلاف '+v);
               d.onclick=()=>{ncv=v;c.querySelectorAll('.dot').forEach(x=>x.classList.toggle('sel',x===d))};c.append(d)});
           }
           $('#nx').onclick=()=>$('#nd').hidden=true;
           $('#nok').onclick=()=>{
-            const t=$('#nt').value.trim()||'دفتر بلا عنوان';$('#nd').hidden=true;
-            if(nmode==='new'){const n={id:Math.random().toString(36).slice(2,9),title:t,cv:ncv,tpl:$('#ntpl').value,bd:bdVal(),pages:[{strokes:[]}],u:Date.now()};S.notes.push(n);save(n);openNote(n.id)}
-            else{cur.title=t;cur.cv=ncv;cur.tpl=$('#ntpl').value;{const b=bdVal();if(b)cur.bd=b;else delete cur.bd}$('#ttl').value=t;cv.forEach((_,i)=>rp(i));save()}
+            const tpl=$('#ntpl').value,b=bdVal();$('#nd').hidden=true;
+            if(nmode==='page'){
+              if(nscope==='all'){cur.tpl=tpl;if(b)cur.bd=b;else delete cur.bd;cur.pages.forEach(p=>{delete p.tpl;delete p.bd})}
+              else{const p=cur.pages[ap];p.tpl=tpl;p.bd=b||{t:'none'}}
+              cur.u=Date.now();cv.forEach((_,i)=>rp(i));save();toast(nscope==='all'?'تم تطبيق الخصائص على كل الصفحات':'تم تغيير خصائص الصفحة '+(ap+1));return;
+            }
+            const t=$('#nt').value.trim()||'دفتر بلا عنوان';
+            if(nmode==='new'){const n={id:Math.random().toString(36).slice(2,9),title:t,cv:ncv,tpl:tpl,bd:b,pages:[{strokes:[]}],u:Date.now()};S.notes.push(n);save(n);openNote(n.id)}
+            else{cur.title=t;cur.cv=ncv;cur.tpl=tpl;if(b)cur.bd=b;else delete cur.bd;cur.pages.forEach(p=>{delete p.tpl;delete p.bd});$('#ttl').value=t;cv.forEach((_,i)=>rp(i));save()}
           };
 
           async function deliver(blob,name){
@@ -698,7 +750,7 @@ jobs:
             cur.pages.forEach((pg,i)=>{
               const t=document.createElement('button');t.className='th';t.dataset.p=i;t.setAttribute('aria-label','صفحة '+(i+1));
               t.innerHTML='<canvas width="108" height="152"></canvas><i>'+(i+1)+'</i>';
-              const x=t.querySelector('canvas').getContext('2d');x.setTransform(108/W,0,0,108/W,0,0);paper(x,cur.tpl,pg.bg?thFor(pg.bg):null);pg.strokes.forEach(q=>stroke(x,q));
+              const x=t.querySelector('canvas').getContext('2d');x.setTransform(108/W,0,0,108/W,0,0);paper(x,ptpl(pg),pg.bg?thFor(pg.bg):null,pbd(pg));pg.strokes.forEach(q=>stroke(x,q));
               t.onclick=()=>goTo(i);s.append(t);
             });
             const a=document.createElement('button');a.className='th add';a.innerHTML=ic('plus');a.setAttribute('aria-label','صفحة جديدة');a.onclick=addPage;s.append(a);
@@ -713,6 +765,7 @@ jobs:
             P.scrollTo({top:P.scrollTop+w.getBoundingClientRect().top-P.getBoundingClientRect().top-14,behavior:now?'auto':'smooth'});
           }
           $('#pnp').onclick=()=>goTo(ap-1);$('#pnn').onclick=()=>goTo(ap+1);
+          $('#pns').onclick=()=>{deselect();noteDlg('page')};
           $('#pnt').onclick=()=>{deselect();$('#gpi').value=ap+1;$('#gpi').max=cur.pages.length;$('#gp').hidden=false;setTimeout(()=>{$('#gpi').focus();$('#gpi').select()},50)};
           const gpGo=()=>{const v=parseInt($('#gpi').value,10);if(!v||v<1||v>cur.pages.length){toast('أدخل رقمًا بين 1 و '+cur.pages.length);return}$('#gp').hidden=true;goTo(v-1)};
           $('#gpok').onclick=gpGo;$('#gpx').onclick=()=>$('#gp').hidden=true;
