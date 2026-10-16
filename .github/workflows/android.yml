@@ -320,8 +320,18 @@ jobs:
                       for (i in 1 until s.points.size) c.drawLine(s.points[i-1].x,s.points[i-1].y,s.points[i].x,s.points[i].y,p)
                   }
                   texts.forEach { t ->
-                      val p = Paint(Paint.ANTI_ALIAS_FLAG).apply { color=t.color; textSize=t.size }
-                      t.value.split("\n").forEachIndexed { i, line -> c.drawText(line,t.x,t.y+i*t.size*1.25f,p) }
+                      val p = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                          color = t.color
+                          textSize = t.size
+                          textAlign = when (t.alignment) {
+                              Gravity.CENTER -> Paint.Align.CENTER
+                              Gravity.LEFT -> Paint.Align.LEFT
+                              else -> Paint.Align.RIGHT
+                          }
+                      }
+                      t.value.split("\n").forEachIndexed { i, line ->
+                          c.drawText(line, t.x, t.y + i * t.size * 1.25f, p)
+                      }
                   }
               }
               private fun alignmentMenu(t: TextItem) {
@@ -453,7 +463,7 @@ jobs:
                           val tess = com.googlecode.tesseract.android.TessBaseAPI()
                           if (!tess.init(filesDir.absolutePath, "ara")) throw IllegalStateException("تعذر تهيئة نموذج العربية")
                           tess.setImage(bitmap)
-                          val recognized = tess.utF8Text ?: ""
+                          val recognized = tess.getUTF8Text() ?: ""
                           tess.end()
                           runOnUiThread {
                               val input = EditText(this).apply { setText(recognized); minLines = 4; gravity = Gravity.TOP or Gravity.RIGHT }
