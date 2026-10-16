@@ -44,7 +44,7 @@ jobs:
           <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
           <title>نجمة - دفتر ملاحظات بخط اليد</title>
           <style>
-          :root{--bg:#0b0e17;--sf:#161a26;--tx:#e8ebf5;--mu:#8a93ab;--ac:#2f6bff;--ln:#2a3042;--rd:#ff6b6b;color-scheme:dark;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+          :root{--bg:#f7f5f2;--sf:#ffffff;--tx:#1f2430;--mu:#7b8294;--ac:#2f6bff;--ln:#e6e2dc;--rd:#e5484d;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
           html{scroll-padding-top:env(safe-area-inset-top,0px)}
           *{box-sizing:border-box}
           html,body{height:100%;margin:0}
@@ -57,20 +57,36 @@ jobs:
           button.warn{background:var(--rd);color:#fff;border-color:var(--rd)}
           svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;display:block}
           .ib{display:grid;place-items:center;width:40px;height:40px;padding:0}
-          #home{height:100%;overflow:auto;padding:22px 16px 96px}
-          h1{margin:0 0 16px;font-size:26px;font-weight:700}
-          #grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:16px}
-          .card{position:relative;aspect-ratio:3/4;padding:14px;border:0;border-radius:6px 14px 14px 6px;color:#fff;text-align:start;display:flex;flex-direction:column;justify-content:flex-end;box-shadow:0 3px 10px #0006;overflow:hidden}
-          .card::before{content:"";position:absolute;inset-block:0;inset-inline-start:0;width:10px;background:#0003}
-          .card b{font-weight:700;font-size:17px;line-height:1.3;overflow-wrap:anywhere}
-          .card small{opacity:.85}
-          .empty{color:var(--mu)}
-          #fab2{position:fixed;inset-inline-end:84px;bottom:calc(16px + env(safe-area-inset-bottom,0px));width:56px;height:56px;border-radius:50%;box-shadow:0 4px 14px #0006}
+          #home{height:100%;overflow:auto;padding:max(20px,env(safe-area-inset-top,0px)) 18px 120px;background:linear-gradient(180deg,#fffdfa 0,#f7f5f2 260px)}
+          .wrap{max-width:760px;margin:0 auto}
+          .hd{display:flex;align-items:center;justify-content:space-between;margin:6px 2px 18px}
+          .hd small{display:block;color:var(--mu);font-size:14px;margin-bottom:2px}
+          h1{margin:0;font-size:32px;font-weight:800;letter-spacing:-.3px;font-family:"Amiri","Noto Naskh Arabic","Noto Sans Arabic",serif}
+          .logo{width:46px;height:46px;border-radius:15px;display:grid;place-items:center;color:#fff;background:linear-gradient(145deg,#5b8cff,#2f6bff 55%,#1d4ed8);box-shadow:0 8px 18px -6px #2f6bff99}
+          .logo svg{width:24px;height:24px;fill:#fff;stroke:#fff}
+          .srch{position:relative;display:block;margin:0 0 22px}
+          .srch svg{position:absolute;inset-inline-start:14px;top:50%;margin-top:-10px;width:20px;height:20px;color:var(--mu)}
+          .srch input{width:100%;height:46px;border:1px solid var(--ln);border-radius:16px;background:#fff;padding:0 14px;padding-inline-start:44px;box-shadow:0 2px 8px #1f24300d}
+          .sec{display:flex;justify-content:space-between;align-items:baseline;margin:0 2px 12px;font-weight:700;font-size:16px}
+          .sec small{color:var(--mu);font-weight:400;font-size:13px}
+          #grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:20px 16px}
+          .card{--c:#3b5bdb;position:relative;aspect-ratio:3/4.1;padding:16px 14px 14px;padding-inline-start:24px;border:0;border-radius:8px 20px 20px 8px;background:var(--c);color:#fff;text-align:start;display:flex;flex-direction:column;justify-content:space-between;box-shadow:0 14px 24px -10px var(--sh,#0004),0 2px 6px #1f243014;overflow:hidden;transition:transform .15s}
+          .card:active{transform:scale(.97)}
+          .card::before{content:"";position:absolute;inset-block:0;inset-inline-start:0;width:13px;background:linear-gradient(90deg,#0003,#ffffff33 55%,#0000)}
+          .card::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(155deg,#ffffff47,#ffffff00 42%,#00000029)}
+          .card>*{position:relative;z-index:1}
+          .card .bd{width:30px;height:30px;border-radius:10px;background:#ffffff2e;display:grid;place-items:center}
+          .card .bd svg{width:16px;height:16px;fill:#fff;stroke:#fff}
+          .card b{font-weight:700;font-size:17px;line-height:1.35;overflow-wrap:anywhere;display:block}
+          .card small{opacity:.88;font-size:12px;display:block;margin-top:6px}
+          .empty{text-align:center;color:var(--mu);padding:48px 12px;grid-column:1/-1}
+          .empty svg{width:64px;height:64px;margin:0 auto 12px;color:#c9c3b8;fill:#e9e4da}
+          .fab{position:fixed;inset-inline-end:18px;bottom:calc(18px + env(safe-area-inset-bottom,0px));height:54px;padding:0 22px;border:0;border-radius:27px;display:flex;align-items:center;gap:8px;background:linear-gradient(145deg,#4f82ff,#2f6bff);color:#fff;font-weight:700;box-shadow:0 14px 26px -8px #2f6bffaa}
+          .fab2{position:fixed;inset-inline-start:18px;bottom:calc(18px + env(safe-area-inset-bottom,0px));width:54px;height:54px;border-radius:50%;background:#fff;color:#2f6bff;box-shadow:0 10px 22px -8px #1f243044}
           .imb{display:flex;gap:10px;align-items:center;justify-content:flex-start;width:100%;padding:12px}
           .fi{position:fixed;left:-99px;top:0;width:1px;height:1px;opacity:0}
-          #fab{position:fixed;inset-inline-end:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));width:56px;height:56px;border-radius:50%;box-shadow:0 4px 14px #0006}
           #ed{position:relative;height:100%;display:flex;flex-direction:column}
-          .top{display:flex;gap:0;align-items:center;padding:6px 8px;background:var(--bg);border-bottom:1px solid var(--ln)}
+          .top{display:flex;gap:0;align-items:center;padding:6px 8px;background:var(--sf);border-bottom:1px solid var(--ln)}
           .top .ib{width:31px;height:34px;background:none;border:0;border-radius:8px;color:var(--tx)}
           .top .ib:disabled{opacity:.3}
           .sep{width:1px;height:26px;background:var(--ln);margin-inline:4px}
@@ -83,12 +99,12 @@ jobs:
           #rv{grid-column:1;grid-row:2;width:20px;height:100%;display:block}
           #ed.sp #pages{padding-bottom:130px}
           #gd{grid-column:2;grid-row:2;position:relative;z-index:4;width:100%;height:100%;pointer-events:none}
-          #pages{grid-column:2;grid-row:2;min-height:0;overflow:auto;padding:14px 14px 24px;display:flex;flex-direction:column;gap:22px;background:#0f1220}
-          .pw{position:relative;flex:none;margin:0 auto;box-shadow:0 2px 14px #0008;border-radius:2px}
+          #pages{grid-column:2;grid-row:2;min-height:0;overflow:auto;padding:14px 14px 24px;display:flex;flex-direction:column;gap:22px;background:#ebe8e3}
+          .pw{position:relative;flex:none;margin:0 auto;box-shadow:0 2px 4px #0000000d,0 8px 24px #0000001f;border-radius:2px}
           .pg{display:block;width:100%;aspect-ratio:210/297;height:auto;background:#fff;border-radius:2px;touch-action:none}
           .hand .pg{touch-action:pan-x pan-y}
           .pl{position:absolute;top:100%;left:0;right:0;margin-top:3px;text-align:center;font-size:11px;color:var(--mu);pointer-events:none}
-          #pn{position:absolute;left:10px;bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:6;display:flex;align-items:center;gap:2px;direction:ltr;background:var(--sf);border:1px solid var(--ln);border-radius:18px;padding:4px;box-shadow:0 8px 24px #000a}
+          #pn{position:absolute;left:10px;bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:6;display:flex;align-items:center;gap:2px;direction:ltr;background:var(--sf);border:1px solid var(--ln);border-radius:18px;padding:4px;box-shadow:0 8px 24px #1f243033}
           #ed.sp #pn{bottom:calc(112px + env(safe-area-inset-bottom,0px))}
           #pn button{height:34px;min-width:34px;padding:0 4px;border:0;background:none;border-radius:12px;display:grid;place-items:center;color:var(--tx)}
           #pn svg{width:20px;height:20px}
@@ -106,7 +122,8 @@ jobs:
           #tl .ib svg{width:20px;height:20px}
           #tl .ib.on{background:var(--ac);color:#fff}
           #cc{width:26px;height:26px;border-radius:50%;border:2px solid var(--mu);margin:8px auto 2px;padding:0;flex:none}
-          #pp{position:absolute;right:46px;top:60px;width:min(310px,calc(100% - 58px));z-index:7;background:var(--sf);border:1px solid var(--ln);border-radius:18px;padding:14px;box-shadow:0 10px 30px #000b;display:flex;flex-direction:column;gap:10px}
+          #tl #addp{margin-top:auto;border:1px dashed #cfc9bf;color:var(--ac);background:var(--sf)}
+          #pp{position:absolute;right:46px;top:60px;width:min(310px,calc(100% - 58px));z-index:7;background:var(--sf);border:1px solid var(--ln);border-radius:18px;padding:14px;box-shadow:0 12px 32px #1f243040;display:flex;flex-direction:column;gap:10px}
           .pr{display:flex;align-items:center;gap:10px}
           .pr input[type=range]{flex:1;accent-color:var(--ac)}
           .nm{min-width:4ch;text-align:center;color:var(--mu);font-size:13px}
@@ -117,27 +134,31 @@ jobs:
           .dot.sel{outline:2px solid var(--ac);outline-offset:2px}
           .dot input{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer}
           #pv{width:100%;height:54px;border-radius:10px;background:#fff}
-          #st{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:6;display:flex;gap:8px;align-items:center;background:var(--sf);border:1px solid var(--ln);border-radius:18px;padding:8px;max-width:calc(100% - 16px);overflow-x:auto;box-shadow:0 8px 24px #000a}
+          #st{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:6;display:flex;gap:8px;align-items:center;background:var(--sf);border:1px solid var(--ln);border-radius:18px;padding:8px;max-width:calc(100% - 16px);overflow-x:auto;box-shadow:0 8px 24px #1f243033}
           .th{position:relative;width:54px;height:76px;padding:0;border-radius:8px;border:2px solid var(--ln);overflow:hidden;background:#fff;flex:none}
           .th.on{border-color:var(--ac)}
           .th canvas{width:100%;height:100%;display:block}
           .th i{position:absolute;bottom:3px;right:3px;font-style:normal;font-size:11px;background:#555c;color:#fff;border-radius:5px;padding:0 5px}
           .th.add{border-style:dashed;background:none;color:var(--mu);display:grid;place-items:center}
-          .ov{position:fixed;inset:0;background:#000b;display:grid;place-items:center;padding:16px;z-index:8}
+          .ov{position:fixed;inset:0;background:#1f243073;display:grid;place-items:center;padding:16px;z-index:8}
           .sheet{background:var(--sf);border-radius:16px;padding:16px;width:100%;max-width:420px;display:flex;flex-direction:column;gap:12px}
           .sheet input[type=text],.sheet select{width:100%;background:var(--bg);border:1px solid var(--ln);border-radius:10px;padding:8px 10px}
           .row{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
           .cvs{display:flex;gap:10px;flex-wrap:wrap}
           .cvs .dot{width:34px;height:34px}
-          #toast{position:fixed;inset-inline:16px;bottom:130px;margin:auto;max-width:360px;background:#e8ebf5;color:#12151f;border-radius:10px;padding:10px 14px;text-align:center;z-index:9}
+          #toast{position:fixed;inset-inline:16px;bottom:130px;margin:auto;max-width:360px;background:#1f2430;color:#fff;border-radius:10px;padding:10px 14px;text-align:center;z-index:9}
           </style>
           </head>
           <body>
           <main id="home">
-            <h1>دفاتري</h1>
-            <div id="grid"></div>
-            <button id="fab" class="on ib" data-i="plus" aria-label="دفتر جديد" title="دفتر جديد"></button>
-            <button id="fab2" class="ib" data-i="fileup" aria-label="استيراد PDF كدفتر جديد" title="استيراد PDF كدفتر جديد"></button>
+            <div class="wrap">
+              <div class="hd"><div><small id="hi">أهلًا</small><h1>دفاتري</h1></div><div class="logo" data-i="star"></div></div>
+              <label class="srch"><span data-i="search"></span><input id="sq" type="search" aria-label="بحث في الدفاتر" placeholder="ابحث في دفاترك"></label>
+              <div class="sec"><span>كل الدفاتر</span><small id="cnt"></small></div>
+              <div id="grid"></div>
+            </div>
+            <button id="fab" class="fab" aria-label="دفتر جديد" title="دفتر جديد"><span data-i="plus" style="display:grid"></span>دفتر جديد</button>
+            <button id="fab2" class="fab2 ib" data-i="fileup" aria-label="استيراد PDF كدفتر جديد" title="استيراد PDF كدفتر جديد"></button>
           </main>
 
           <section id="ed" hidden>
@@ -162,6 +183,7 @@ jobs:
                 <button data-t="er" class="ib" data-i="er" aria-label="ممحاة" title="ممحاة"></button>
                 <button data-t="tx" class="ib" data-i="tx" aria-label="نص" title="نص"></button>
                 <button id="cc" aria-label="اللون" title="اللون"></button>
+                <button id="addp" class="ib" data-i="fileplus" aria-label="إضافة صفحة" title="إضافة صفحة"></button>
               </div>
               <div id="work"><canvas id="rh" aria-hidden="true"></canvas><canvas id="rv" aria-hidden="true"></canvas><div id="pages"></div><canvas id="gd" aria-hidden="true"></canvas></div>
             </div>
@@ -224,6 +246,7 @@ jobs:
           image:'<rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>',
           fileup:'<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M12 12v6"/><path d="m15 15-3-3-3 3"/>',
           layers:'<path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/>',
+          star:'<path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z"/>',book:'<path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/>',search:'<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
           cu:'<path d="m18 15-6-6-6 6"/>',cd:'<path d="m6 9 6 6 6-6"/>',
           check:'<path d="M20 6 9 17l-5-5"/>',x:'<path d="M18 6 6 18"/><path d="m6 6 12 12"/>'};
           const ic=n=>'<svg viewBox="0 0 24 24" aria-hidden="true">'+P[n]+'</svg>';
@@ -260,7 +283,7 @@ jobs:
           }
           document.addEventListener('visibilitychange',()=>{if(document.hidden)flush()});addEventListener('pagehide',flush);
           const COLORS=['#1b2033','#d6336c','#3b5bdb','#2f9e44','#f08c00','#f7d84a'];
-          const COVERS=['#3b5bdb','#d6336c','#2f9e44','#e8590c','#7048e8','#0c8599','#495057','#c92a2a'];
+          const COVERS=['#34509c','#9b2f57','#1f7a5c','#c2662d','#5f3dc4','#0c7c8c','#3b4252','#b02a37'];
           const BASE=[['sans-serif','عادي'],['serif','سيريف'],['monospace','أحادي'],['cursive','يدوي']];
           const T={pen:{c:'#1b2033',w:3,a:1},hl:{c:'#f7d84a',w:3,a:.4},er:{w:8},tx:{c:'#1b2033',z:32,f:'sans-serif'}};
           const PAL=['#f59f00','#fd7e14','#e03131','#ffffff','#8d99ae','#4b5563','#111827','#3b82f6','#38bdf8','#06b6d4','#14b8a6','#22c55e','#84cc16','#facc15','#92400e','#fb7185','#ec4899','#c026d3','#8b5cf6','#6366f1'];
@@ -318,12 +341,15 @@ jobs:
           const simp=p=>p.map(q=>[Math.round(q[0]*10)/10,Math.round(q[1]*10)/10,Math.round(q[2]*100)/100]);
 
           function home(){
-            cur=null;BG.clear();TH.clear();cv=[];if(io)io.disconnect();lc.width=1;lc.height=1;lcPage=-1;$('#home').hidden=false;$('#ed').hidden=true;
+            cur=null;BG.clear();TH.clear();cv=[];if(io)io.disconnect();lc.width=1;lc.height=1;lcPage=-1;$('#home').hidden=false;$('#ed').hidden=true;$('#pp').hidden=true;
+            const hr=new Date().getHours();$('#hi').textContent=hr<12?'صباح الخير':hr<18?'نهارك سعيد':'مساء الخير';
+            const q=($('#sq').value||'').trim().toLowerCase(),all=S.notes.slice().sort((a,b)=>b.u-a.u),list=q?all.filter(n=>n.title.toLowerCase().includes(q)):all;
+            $('#cnt').textContent=all.length+' دفتر';
             const g=$('#grid');g.innerHTML='';
-            if(!S.notes.length)g.innerHTML='<p class="empty">لا توجد دفاتر بعد. اضغط زر + لتبدأ.</p>';
-            S.notes.sort((a,b)=>b.u-a.u).forEach(n=>{
-              const d=document.createElement('button');d.className='card';d.style.background=n.cv;
-              d.innerHTML='<b></b><small></small>';d.querySelector('b').textContent=n.title;
+            if(!list.length)g.innerHTML='<div class="empty">'+ic('book')+'<div>'+(q?'لا توجد نتائج مطابقة':'لا توجد دفاتر بعد. اضغط «دفتر جديد» لتبدأ.')+'</div></div>';
+            list.forEach(n=>{
+              const d=document.createElement('button');d.className='card';d.style.setProperty('--c',n.cv);d.style.setProperty('--sh',n.cv+'99');
+              d.innerHTML='<span class="bd">'+ic('star')+'</span><span><b></b><small></small></span>';d.querySelector('b').textContent=n.title;
               d.querySelector('small').textContent=n.pages.length+' صفحة';
               d.onclick=()=>openNote(n.id);g.append(d);
             });
@@ -632,10 +658,10 @@ jobs:
             const D=2,pw=P.clientWidth,ph=P.clientHeight,pr=P.getBoundingClientRect(),k=794*Z/21;
             h.width=pw*D;h.height=20*D;v.width=20*D;v.height=ph*D;
             const f=cv[0]?cv[0].getBoundingClientRect():pr,ox=f.left-pr.left,oy=f.top-pr.top;
-            const draw=(c,size,o,hz)=>{const x=c.getContext('2d');x.scale(D,D);x.fillStyle='#161a26';x.fillRect(0,0,c.width,c.height);
-              x.fillStyle='#2a3042';
+            const draw=(c,size,o,hz)=>{const x=c.getContext('2d');x.scale(D,D);x.fillStyle='#f1eee9';x.fillRect(0,0,c.width,c.height);
+              x.fillStyle='#e0dcd5';
               if(hz)x.fillRect(o,0,210*k/10,20);else cv.forEach(q=>{const b=q.getBoundingClientRect();x.fillRect(0,b.top-pr.top,20,b.height)});
-              x.strokeStyle=x.fillStyle='#8a93ab';x.font='9px system-ui';x.lineWidth=1;x.textAlign='center';
+              x.strokeStyle=x.fillStyle='#8b8f9c';x.font='9px system-ui';x.lineWidth=1;x.textAlign='center';
               const u=k/10,st=u>=3?1:10,a=Math.max(0,Math.ceil(-o/u/st)*st),z=Math.floor((size-o)/u/st)*st;
               for(let m=a;m<=z;m+=st){const p=o+m*u,L=m%10===0?12:m%5===0?8:5;x.beginPath();
                 if(hz){x.moveTo(p,20);x.lineTo(p,20-L)}else{x.moveTo(20,p);x.lineTo(20-L,p)}x.stroke();
@@ -652,7 +678,7 @@ jobs:
               hx.fillStyle='#4dabf766';hx.fillRect(L,0,R-L,20);vx.fillStyle='#4dabf766';vx.fillRect(0,Tp,20,B-Tp);
               hx.strokeStyle=vx.strokeStyle=A;hx.beginPath();hx.moveTo(L,0);hx.lineTo(L,20);hx.moveTo(R,0);hx.lineTo(R,20);hx.stroke();
               vx.beginPath();vx.moveTo(0,Tp);vx.lineTo(20,Tp);vx.moveTo(0,B);vx.lineTo(20,B);vx.stroke();
-              hx.fillStyle=vx.fillStyle='#fff';hx.font=vx.font='bold 9px system-ui';
+              hx.fillStyle=vx.fillStyle='#1f2430';hx.font=vx.font='bold 9px system-ui';
               hx.textAlign='right';hx.fillText(((L-ox)/k).toFixed(1),L-3,9);hx.textAlign='left';hx.fillText(((R-ox)/k).toFixed(1),R+3,9);
               vx.textAlign='center';vx.fillText(((Tp-oy)/k).toFixed(1),10,Tp-3);vx.fillText(((B-oy)/k).toFixed(1),10,B+10);
             }
@@ -663,6 +689,8 @@ jobs:
           $('#un').onclick=()=>{deselect();swap(undo,redo)};$('#re').onclick=()=>{deselect();swap(redo,undo)};
           $('#ttl').oninput=e=>{cur.title=e.target.value||'دفتر بلا عنوان';save()};
           $('#back').onclick=()=>{deselect();save();home()};
+          $('#sq').oninput=()=>home();
+          $('#addp').onclick=addPage;
           $('#cov').onclick=()=>noteDlg('edit');$('#fab').onclick=()=>noteDlg('new');$('#exp').onclick=exportPdf;
           $('#ndel').onclick=()=>{
             const d=$('#ndel');
@@ -767,6 +795,15 @@ jobs:
           }
           window.addEventListener('najmaOpen',e=>e.id&&ready.then(()=>openById(e.id)));
           const ready=initStore().then(home);
+          {const A=window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.App;
+          const goBack=()=>{
+            const o=['#gp','#im','#nd'].map(x=>$(x)).find(x=>x&&!x.hidden);
+            if(o){o.hidden=true;return}
+            if(!$('#pp').hidden){$('#pp').hidden=true;return}
+            if(cur){deselect();save();flush();home();return}
+            if(A&&A.exitApp)A.exitApp();
+          };
+          if(A&&A.addListener)A.addListener('backButton',goBack);}
           {const p=SC();if(p)p.getLaunch().then(r=>r&&r.id&&ready.then(()=>openById(r.id))).catch(()=>{})}
           $('#pages').addEventListener('scroll',()=>{rq();if(cur&&cv.length){const p=curPage();if(p!==ap){ap=p;pnUpd();actv()}}});window.addEventListener('resize',rq);window.addEventListener('resize',reveal);if(window.visualViewport)visualViewport.addEventListener('resize',reveal);
           </script>
@@ -777,7 +814,7 @@ jobs:
       - name: Create Capacitor project
         run: |
           npm init -y
-          npm install @capacitor/core@6 @capacitor/cli@6 @capacitor/android@6 @capacitor/filesystem@6 @capacitor/share@6
+          npm install @capacitor/core@6 @capacitor/cli@6 @capacitor/android@6 @capacitor/filesystem@6 @capacitor/share@6 @capacitor/app@6
           npx cap init "نجمة" com.najma.notes --web-dir=www
           npx cap add android
           npm install pdfjs-dist@3.11.174 --omit=optional
