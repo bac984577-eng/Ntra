@@ -137,7 +137,7 @@ jobs:
           import kotlin.math.min
 
           data class Stroke(val color: Int, val width: Float, val points: MutableList<PointF>)
-          data class TextItem(var value: String, var x: Float, var y: Float, var size: Float, var color: Int, var alignment: Int = Gravity.RIGHT)
+          data class TextItem(var value: String, var x: Float, var y: Float, var size: Float, var color: Int, var alignment: Int = Gravity.RIGHT, var fontName: String = "افتراضي")
 
           class MainActivity : Activity() {
               private val pages = mutableListOf<MutableList<Stroke>>()
@@ -160,9 +160,44 @@ jobs:
               private lateinit var label: TextView
               private val palette = mutableListOf(Color.BLACK, Color.RED, Color.BLUE, Color.GREEN, Color.MAGENTA, Color.CYAN, 0xFFFF9800.toInt())
 
+              private val toolPrefs by lazy { getSharedPreferences("daftar_tool_preferences", MODE_PRIVATE) }
+              private var textFontName = "افتراضي"
+
+              private fun loadToolPreferences() {
+                  ink = toolPrefs.getInt("ink_color", Color.BLACK)
+                  inkWidth = toolPrefs.getFloat("ink_width", 4f)
+                  marker = toolPrefs.getInt("marker_color", Color.argb(100, 255, 230, 0))
+                  markerWidth = toolPrefs.getFloat("marker_width", 22f)
+                  eraserWidth = toolPrefs.getFloat("eraser_width", 28f)
+                  textColor = toolPrefs.getInt("text_color", Color.rgb(30, 30, 30))
+                  textSize = toolPrefs.getFloat("text_size", 22f)
+                  tool = toolPrefs.getInt("selected_tool", 0)
+                  textFontName = toolPrefs.getString("text_font", "افتراضي") ?: "افتراضي"
+                  val extraColors = toolPrefs.getString("extra_colors", "") ?: ""
+                  extraColors.split(",").filter { it.isNotBlank() }.forEach { raw ->
+                      raw.toIntOrNull()?.let { c -> if (!palette.contains(c)) palette.add(c) }
+                  }
+              }
+
+              private fun persistToolPreferences() {
+                  toolPrefs.edit()
+                      .putInt("ink_color", ink).putFloat("ink_width", inkWidth)
+                      .putInt("marker_color", marker).putFloat("marker_width", markerWidth)
+                      .putFloat("eraser_width", eraserWidth).putInt("text_color", textColor)
+                      .putFloat("text_size", textSize).putInt("selected_tool", tool)
+                      .putString("text_font", textFontName)
+                      .putString("extra_colors", palette.drop(7).joinToString(","))
+                      .apply()
+              }
+
+              override fun onPause() { persistToolPreferences(); if (::paper.isInitialized) save(false); super.onPause() }
+
               override fun onCreate(savedInstanceState: Bundle?) {
                   super.onCreate(savedInstanceState)
-                  addPage()
+                  loadToolPreferences()
+                  loadNotebook()
+                  if (pages.isEmpty()) addPage()
+                  page = page.coerceIn(0, (pages.size - 1).coerceAtLeast(0))
                   window.statusBarColor = Color.rgb(43, 43, 43)
                   window.navigationBarColor = Color.rgb(43, 43, 43)
                   window.decorView.systemUiVisibility = 0
@@ -171,9 +206,9 @@ jobs:
                   val tools: List<Pair<String, () -> Unit>> = listOf(
                       "◇" to { menu() }, "#" to { page = (page + 1).coerceAtMost(29); addPageIfNeeded(); update() },
                       "▤" to { studyToolsMenu() }, "T" to { addText() }, "▧" to { backgroundMenu() },
-                      "◌" to { toast("أداة التحديد الحر") }, "◇" to { tool = 2; paper.invalidate() },
-                      "／" to { tool = 0; paper.invalidate() }, "✎" to { tool = 0; paper.invalidate() },
-                      "✒" to { tool = 1; paper.invalidate() }, "↶" to { undo() }, "OCR" to { recognizeHandwriting() }
+                      "◌" to { toast("أداة التحديد الحر") }, "◇" to { tool = 2; persistToolPreferences(); paper.invalidate() },
+                      "／" to { tool = 0; persistToolPreferences(); paper.invalidate() }, "✎" to { tool = 0; persistToolPreferences(); paper.invalidate() },
+                      "✒" to { tool = 1; persistToolPreferences(); paper.invalidate() }, "🎨" to { colors() }, "⚙" to { settings() }, "↶" to { undo() }, "OCR" to { recognizeHandwriting() }
                   )
                   tools.forEachIndexed { index, item ->
                       val b = button(item.first, item.second)
@@ -210,7 +245,7 @@ jobs:
               private fun menu() {
                   AlertDialog.Builder(this).setTitle("📚 دفتر").setItems(arrayOf("✏️ اسم الملاحظة", "📄 اختيار الغلاف", "📤 تصدير PDF", "💾 حفظ", "🖼️ عرض الغلاف", "📚 أدوات الدراسة دون إنترنت")) { _, i ->
                       when (i) {
-                          0 -> { val input = EditText(this).apply { setText(title) }; AlertDialog.Builder(this).setTitle("اسم الملاحظة").setView(input).setPositiveButton("حفظ") { _, _ -> title = input.text.toString().ifBlank { "ملاحظتي" }; update() }.setNegativeButton("إلغاء", null).show() }
+                          0 -> { val input = EditText(this).apply { setText(title) }; AlertDialog.Builder(this).setTitle("اسم الملاحظة").setView(input).setPositiveButton("حفظ") { _, _ -> title = input.text.toString().ifBlank { "ملاحظتي" }; save(false); update() }.setNegativeButton("إلغاء", null).show() }
                           1 -> chooseImage(101)
                           2 -> exportPdf()
                           3 -> save()
@@ -240,8 +275,8 @@ jobs:
                       return
                   }
                   try { contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) } catch (_: Exception) {}
-                  if (requestCode == 101) { cover = uri; Toast.makeText(this, "تم اختيار الغلاف", Toast.LENGTH_SHORT).show() }
-                  if (requestCode == 102) { background = uri; paper.invalidate(); Toast.makeText(this, "تم اختيار الخلفية", Toast.LENGTH_SHORT).show() }
+                  if (requestCode == 101) { cover = uri; save(false); Toast.makeText(this, "تم اختيار الغلاف", Toast.LENGTH_SHORT).show() }
+                  if (requestCode == 102) { background = uri; save(false); paper.invalidate(); Toast.makeText(this, "تم اختيار الخلفية", Toast.LENGTH_SHORT).show() }
               }
               private fun colors() {
                   val names = arrayOf("أسود", "أحمر", "أزرق", "أخضر", "أرجواني", "سماوي", "برتقالي", "＋ لون مخصص")
@@ -255,26 +290,40 @@ jobs:
                   }.show()
               }
               private fun setColor(c: Int) {
-                  when (tool) { 0 -> ink = c; 1 -> marker = Color.argb(100, Color.red(c), Color.green(c), Color.blue(c)); else -> textColor = c }
+                  when (tool) {
+                      0 -> ink = c
+                      1 -> marker = Color.argb(100, Color.red(c), Color.green(c), Color.blue(c))
+                      else -> textColor = c
+                  }
+                  persistToolPreferences()
                   paper.invalidate()
               }
               private fun settings() {
                   val box = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(24, 8, 24, 0) }
-                  val width = EditText(this).apply { inputType = 2; setText((when(tool){0->inkWidth;1->markerWidth;else->eraserWidth}).toInt().toString()); hint = "الحجم والسمك" }
+                  val width = EditText(this).apply { inputType = 2; setText((when (tool) { 0 -> inkWidth; 1 -> markerWidth; else -> eraserWidth }).toInt().toString()); hint = "سمك القلم / حجم الأداة" }
                   val size = EditText(this).apply { inputType = 2; setText(textSize.toInt().toString()); hint = "حجم النص" }
+                  val fontLabel = TextView(this).apply { text = "نوع الخط للنصوص الجديدة"; setPadding(0, 12, 0, 4) }
+                  val font = Spinner(this).apply {
+                      adapter = ArrayAdapter(this@MainActivity, android.R.layout.simple_spinner_dropdown_item, arrayOf("افتراضي", "نسخي", "أحادي"))
+                      setSelection(when (textFontName) { "نسخي" -> 1; "أحادي" -> 2; else -> 0 })
+                  }
                   box.addView(TextView(this).apply { text = "حجم الأداة" }); box.addView(width)
                   box.addView(TextView(this).apply { text = "حجم النص" }); box.addView(size)
-                  AlertDialog.Builder(this).setTitle("⚙️ الخصائص").setView(box).setPositiveButton("تطبيق") { _, _ ->
-                      val w = width.text.toString().toFloatOrNull()?.coerceIn(1f, 90f)
-                      if (w != null) when(tool) { 0 -> inkWidth = w; 1 -> markerWidth = w; else -> eraserWidth = w }
-                      textSize = size.text.toString().toFloatOrNull()?.coerceIn(8f, 100f) ?: textSize
-                      paper.invalidate()
-                  }.setNegativeButton("إلغاء", null).show()
+                  box.addView(fontLabel); box.addView(font)
+                  AlertDialog.Builder(this).setTitle("⚙️ خصائص الأدوات المحفوظة").setView(box)
+                      .setPositiveButton("تطبيق وحفظ") { _, _ ->
+                          val w = width.text.toString().toFloatOrNull()?.coerceIn(1f, 90f)
+                          if (w != null) when (tool) { 0 -> inkWidth = w; 1 -> markerWidth = w; else -> eraserWidth = w }
+                          textSize = size.text.toString().toFloatOrNull()?.coerceIn(8f, 100f) ?: textSize
+                          textFontName = font.selectedItem?.toString() ?: "افتراضي"
+                          persistToolPreferences(); paper.invalidate()
+                          toast("حُفظت خصائص الأدوات وستبقى بعد إغلاق التطبيق")
+                      }.setNegativeButton("إلغاء", null).show()
               }
               private fun addText() {
                   val input = EditText(this).apply { hint = "اكتب النص"; minLines = 2; gravity = Gravity.TOP or Gravity.RIGHT }
                   AlertDialog.Builder(this).setTitle("🔤 نص جديد").setView(input).setPositiveButton("إضافة") { _, _ ->
-                      if (input.text.isNotBlank()) { textPages[page].add(TextItem(input.text.toString(), 565f, 100f, textSize, textColor, Gravity.RIGHT)); paper.invalidate() }
+                      if (input.text.isNotBlank()) { textPages[page].add(TextItem(input.text.toString(), 565f, 100f, textSize, textColor, Gravity.RIGHT, textFontName)); paper.invalidate(); save(false) }
                   }.setNeutralButton("خط/حجم/لون") { _, _ -> settings() }.setNegativeButton("إلغاء", null).show()
               }
               private fun editText(t: TextItem) {
@@ -288,12 +337,79 @@ jobs:
                   if (list.isNotEmpty()) list.removeAt(list.lastIndex) else toast("لا توجد كتابة للتراجع")
                   paper.invalidate(); save()
               }
-              private fun save() {
+              private fun save(showMessage: Boolean = true) {
                   try {
-                      val f = java.io.File(filesDir, "daftar-note.txt")
-                      f.writeText("Daftar\n$title\npages=${pages.size}\nink=${pages.sumOf { it.size }}\ntext=${textPages.sumOf { it.size }}")
-                      toast("تم الحفظ محليًا")
-                  } catch (_: Exception) { toast("تعذر الحفظ") }
+                      val root = org.json.JSONObject()
+                      root.put("title", title)
+                      root.put("page", page)
+                      root.put("cover", cover?.toString() ?: "")
+                      root.put("background", background?.toString() ?: "")
+                      root.put("backgroundAll", backgroundAll)
+                      val pageArray = org.json.JSONArray()
+                      pages.forEachIndexed { index, strokes ->
+                          val pageObject = org.json.JSONObject()
+                          val strokeArray = org.json.JSONArray()
+                          strokes.forEach { stroke ->
+                              val strokeObject = org.json.JSONObject().put("color", stroke.color).put("width", stroke.width)
+                              val points = org.json.JSONArray()
+                              stroke.points.forEach { point -> points.put(org.json.JSONArray().put(point.x).put(point.y)) }
+                              strokeObject.put("points", points)
+                              strokeArray.put(strokeObject)
+                          }
+                          pageObject.put("strokes", strokeArray)
+                          val textArray = org.json.JSONArray()
+                          (textPages.getOrNull(index) ?: emptyList()).forEach { item ->
+                              textArray.put(org.json.JSONObject().put("value", item.value).put("x", item.x).put("y", item.y)
+                                  .put("size", item.size).put("color", item.color).put("alignment", item.alignment).put("font", item.fontName))
+                          }
+                          pageObject.put("texts", textArray)
+                          pageArray.put(pageObject)
+                      }
+                      root.put("pages", pageArray)
+                      java.io.File(filesDir, "daftar-note.json").writeText(root.toString())
+                      if (showMessage) toast("تم حفظ الدفتر كاملًا على الجهاز")
+                  } catch (e: Exception) { if (showMessage) toast("تعذر الحفظ: ${e.message}") }
+              }
+
+              private fun loadNotebook() {
+                  try {
+                      val f = java.io.File(filesDir, "daftar-note.json")
+                      if (!f.exists()) return
+                      val root = org.json.JSONObject(f.readText())
+                      title = root.optString("title", "ملاحظتي")
+                      page = root.optInt("page", 0)
+                      backgroundAll = root.optBoolean("backgroundAll", false)
+                      root.optString("cover", "").takeIf { it.isNotBlank() }?.let { cover = Uri.parse(it) }
+                      root.optString("background", "").takeIf { it.isNotBlank() }?.let { background = Uri.parse(it) }
+                      val storedPages = root.optJSONArray("pages") ?: return
+                      pages.clear(); textPages.clear()
+                      for (i in 0 until storedPages.length()) {
+                          val po = storedPages.optJSONObject(i) ?: org.json.JSONObject()
+                          val strokes = mutableListOf<Stroke>()
+                          val sa = po.optJSONArray("strokes") ?: org.json.JSONArray()
+                          for (j in 0 until sa.length()) {
+                              val so = sa.optJSONObject(j) ?: continue
+                              val pts = mutableListOf<PointF>()
+                              val pa = so.optJSONArray("points") ?: org.json.JSONArray()
+                              for (k in 0 until pa.length()) {
+                                  val xy = pa.optJSONArray(k) ?: continue
+                                  if (xy.length() >= 2) pts.add(PointF(xy.optDouble(0).toFloat(), xy.optDouble(1).toFloat()))
+                              }
+                              strokes.add(Stroke(so.optInt("color", Color.BLACK), so.optDouble("width", 4.0).toFloat(), pts))
+                          }
+                          val texts = mutableListOf<TextItem>()
+                          val ta = po.optJSONArray("texts") ?: org.json.JSONArray()
+                          for (j in 0 until ta.length()) {
+                              val to = ta.optJSONObject(j) ?: continue
+                              texts.add(TextItem(to.optString("value", ""), to.optDouble("x", 565.0).toFloat(),
+                                  to.optDouble("y", 100.0).toFloat(), to.optDouble("size", 22.0).toFloat(),
+                                  to.optInt("color", Color.BLACK), to.optInt("alignment", Gravity.RIGHT), to.optString("font", "افتراضي")))
+                          }
+                          pages.add(strokes); textPages.add(texts)
+                      }
+                  } catch (_: Exception) {
+                      pages.clear(); textPages.clear()
+                  }
               }
               private fun exportPdf() {
                   try {
@@ -323,6 +439,11 @@ jobs:
                       val p = Paint(Paint.ANTI_ALIAS_FLAG).apply {
                           color = t.color
                           textSize = t.size
+                          typeface = when (t.fontName) {
+                              "نسخي" -> Typeface.create("serif", Typeface.NORMAL)
+                              "أحادي" -> Typeface.create("monospace", Typeface.NORMAL)
+                              else -> Typeface.create("sans-serif", Typeface.NORMAL)
+                          }
                           textAlign = when (t.alignment) {
                               Gravity.CENTER -> Paint.Align.CENTER
                               Gravity.LEFT -> Paint.Align.LEFT
@@ -338,9 +459,8 @@ jobs:
                   AlertDialog.Builder(this).setTitle("محاذاة النص")
                       .setItems(arrayOf("محاذاة إلى اليمين", "توسيط", "محاذاة إلى اليسار")) { _, which ->
                           t.alignment = when (which) { 1 -> Gravity.CENTER; 2 -> Gravity.LEFT; else -> Gravity.RIGHT }
-                          // x is the alignment anchor in the page coordinate system.
                           t.x = when (which) { 1 -> 297.5f; 2 -> 30f; else -> 565f }
-                          paper.invalidate(); save()
+                          persistToolPreferences(); paper.invalidate(); save()
                       }.show()
               }
 
@@ -470,7 +590,7 @@ jobs:
                               AlertDialog.Builder(this).setTitle("النص المستخرج — راجعه وصحّحه").setView(input)
                                   .setPositiveButton("إدراج في مربع النص") { _, _ ->
                                       if (input.text.isNotBlank()) {
-                                          textPages[page].add(TextItem(input.text.toString(), 565f, 120f, textSize, textColor, Gravity.RIGHT))
+                                          textPages[page].add(TextItem(input.text.toString(), 565f, 120f, textSize, textColor, Gravity.RIGHT, textFontName))
                                           paper.invalidate(); save()
                                       }
                                   }.setNegativeButton("إغلاق", null).show()
@@ -551,7 +671,7 @@ jobs:
                               } else if(tool==2) erase(p) else active?.points?.add(p)
                               invalidate(); return true
                           }
-                          MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> { active=null; moveText=false; save(); invalidate(); return true }
+                          MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> { active=null; moveText=false; save(false); invalidate(); return true }
                       }
                       return true
                   }
