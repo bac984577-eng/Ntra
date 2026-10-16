@@ -56,6 +56,7 @@ jobs:
           mkdir -p app/src/main/java/com/daftar/notes app/src/main/res/values app/src/main/assets/tessdata
           curl --fail --location --retry 3 "https://github.com/tesseract-ocr/tessdata_best/raw/main/ara.traineddata" -o app/src/main/assets/tessdata/ara.traineddata
           cat > settings.gradle.kts <<'EOF'
+          import org.gradle.api.initialization.resolve.RepositoriesMode
           pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }
           dependencyResolutionManagement {
               repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
@@ -358,7 +359,7 @@ jobs:
                           }
                           pageObject.put("strokes", strokeArray)
                           val textArray = org.json.JSONArray()
-                          (textPages.getOrNull(index) ?: emptyList()).forEach { item ->
+                          textPages.getOrNull(index)?.forEach { item ->
                               textArray.put(org.json.JSONObject().put("value", item.value).put("x", item.x).put("y", item.y)
                                   .put("size", item.size).put("color", item.color).put("alignment", item.alignment).put("font", item.fontName))
                           }
@@ -685,7 +686,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          gradle --no-daemon --stacktrace assembleDebug
+          gradle --no-daemon --stacktrace --warning-mode all assembleDebug
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
