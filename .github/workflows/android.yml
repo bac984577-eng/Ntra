@@ -131,6 +131,7 @@ jobs:
           import android.graphics.pdf.PdfDocument
           import android.net.Uri
           import android.os.Bundle
+          import android.os.CountDownTimer
           import android.view.*
           import android.widget.*
           import java.util.Locale
@@ -209,7 +210,7 @@ jobs:
                       "▤" to { studyToolsMenu() }, "T" to { addText() }, "▧" to { backgroundMenu() },
                       "◌" to { toast("أداة التحديد الحر") }, "◇" to { tool = 2; persistToolPreferences(); paper.invalidate() },
                       "／" to { tool = 0; persistToolPreferences(); paper.invalidate() }, "✎" to { tool = 0; persistToolPreferences(); paper.invalidate() },
-                      "✒" to { tool = 1; persistToolPreferences(); paper.invalidate() }, "🎨" to { colors() }, "⚙" to { settings() }, "↶" to { undo() }, "OCR" to { recognizeHandwriting() }
+                      "✒" to { tool = 1; persistToolPreferences(); paper.invalidate() }, "🎨" to { colors() }, "⚙" to { settings() }, "↶" to { undo() }, "OCR" to { recognizeHandwriting() [...]
                   )
                   tools.forEachIndexed { index, item ->
                       val b = button(item.first, item.second)
@@ -244,9 +245,9 @@ jobs:
               private fun addPageIfNeeded() { while (pages.size <= page) addPage() }
               private fun update() { addPageIfNeeded(); label.text = "${page + 1}/${pages.size}"; paper.invalidate() }
               private fun menu() {
-                  AlertDialog.Builder(this).setTitle("📚 دفتر").setItems(arrayOf("✏️ اسم الملاحظة", "📄 اختيار الغلاف", "📤 تصدير PDF", "💾 حفظ", "🖼️ عرض الغلاف", "📚 أدوات الدراسة دون إنترنت")) { _, i ->
+                  AlertDialog.Builder(this).setTitle("📚 دفتر").setItems(arrayOf("✏️ اسم الملاحظة", "📄 اختيار الغلاف", "📤 تصدير PDF", "💾 حفظ", "�[...]
                       when (i) {
-                          0 -> { val input = EditText(this).apply { setText(title) }; AlertDialog.Builder(this).setTitle("اسم الملاحظة").setView(input).setPositiveButton("حفظ") { _, _ -> title = input.text.toString().ifBlank { "ملاحظتي" }; save(false); update() }.setNegativeButton("إلغاء", null).show() }
+                          0 -> { val input = EditText(this).apply { setText(title) }; AlertDialog.Builder(this).setTitle("اسم الملاحظة").setView(input).setPositiveButton("حفظ") { _,[...]
                           1 -> chooseImage(101)
                           2 -> exportPdf()
                           3 -> save()
@@ -271,7 +272,7 @@ jobs:
                   if (resultCode != RESULT_OK || data?.data == null) return
                   val uri = data.data!!
                   if (requestCode == 103) {
-                      try { contentResolver.openOutputStream(uri)?.use { pendingPdf?.writeTo(it) }; pendingPdf?.close(); pendingPdf = null; Toast.makeText(this, "تم تصدير PDF", Toast.LENGTH_SHORT).show() }
+                      try { contentResolver.openOutputStream(uri)?.use { pendingPdf?.writeTo(it) }; pendingPdf?.close(); pendingPdf = null; Toast.makeText(this, "تم تصدير PDF", Toast.LENGT[...]
                       catch (e: Exception) { Toast.makeText(this, "تعذر حفظ PDF: ${e.message}", Toast.LENGTH_LONG).show() }
                       return
                   }
@@ -301,7 +302,7 @@ jobs:
               }
               private fun settings() {
                   val box = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(24, 8, 24, 0) }
-                  val width = EditText(this).apply { inputType = 2; setText((when (tool) { 0 -> inkWidth; 1 -> markerWidth; else -> eraserWidth }).toInt().toString()); hint = "سمك القلم / حجم الأداة" }
+                  val width = EditText(this).apply { inputType = 2; setText((when (tool) { 0 -> inkWidth; 1 -> markerWidth; else -> eraserWidth }).toInt().toString()); hint = "سمك القلم /[...]
                   val size = EditText(this).apply { inputType = 2; setText(textSize.toInt().toString()); hint = "حجم النص" }
                   val fontLabel = TextView(this).apply { text = "نوع الخط للنصوص الجديدة"; setPadding(0, 12, 0, 4) }
                   val font = Spinner(this).apply {
@@ -324,7 +325,7 @@ jobs:
               private fun addText() {
                   val input = EditText(this).apply { hint = "اكتب النص"; minLines = 2; gravity = Gravity.TOP or Gravity.RIGHT }
                   AlertDialog.Builder(this).setTitle("🔤 نص جديد").setView(input).setPositiveButton("إضافة") { _, _ ->
-                      if (input.text.isNotBlank()) { textPages[page].add(TextItem(input.text.toString(), 565f, 100f, textSize, textColor, Gravity.RIGHT, textFontName)); paper.invalidate(); save(false) }
+                      if (input.text.isNotBlank()) { textPages[page].add(TextItem(input.text.toString(), 565f, 100f, textSize, textColor, Gravity.RIGHT, textFontName)); paper.invalidate(); save(f[...]
                   }.setNeutralButton("خط/حجم/لون") { _, _ -> settings() }.setNegativeButton("إلغاء", null).show()
               }
               private fun editText(t: TextItem) {
@@ -483,7 +484,7 @@ jobs:
 
               private fun studyToolsMenu() {
                   AlertDialog.Builder(this).setTitle("أدوات الدراسة — تعمل محليًا")
-                      .setItems(arrayOf("⏱️ مؤقّت مذاكرة", "🗂️ بطاقات مراجعة", "☑️ قائمة مهام", "🔎 البحث في النصوص", "🔖 حفظ موضع الصفحة")) { _, i ->
+                      .setItems(arrayOf("⏱️ مؤقّت مذاكرة", "🗂️ بطاقات مراجعة", "☑️ قائمة مهام", "🔎 البحث في النصوص", "🔖 حفظ مو[...]
                           when (i) {
                               0 -> studyTimer()
                               1 -> flashcards()
@@ -500,7 +501,7 @@ jobs:
                       .setPositiveButton("ابدأ") { _, _ ->
                           val minutes = input.text.toString().toLongOrNull()?.coerceIn(1, 240) ?: 40L
                           object : CountDownTimer(minutes * 60000L, 1000L) {
-                              override fun onTick(millis: Long) { label.text = String.format(Locale.getDefault(), "%02d:%02d", millis / 60000, (millis % 60000) / 1000) }
+                              override fun onTick(millisUntilFinished: Long) { label.text = String.format(Locale.getDefault(), "%02d:%02d", millisUntilFinished / 60000, (millisUntilFinished % 60000) / 1000) }
                               override fun onFinish() { label.text = "${page + 1}/${pages.size}"; toast("انتهت جلسة المذاكرة — خذ استراحة قصيرة") }
                           }.start()
                           toast("بدأ المؤقّت: $minutes دقيقة")
@@ -629,12 +630,12 @@ jobs:
                       canvas.translate(r.left,r.top)
                       canvas.scale(r.width()/595f,r.height()/842f)
                       if (this@MainActivity.background != null && (backgroundAll || page == 0)) {
-                          try { contentResolver.openInputStream(this@MainActivity.background!!)?.use { android.graphics.BitmapFactory.decodeStream(it)?.let { b -> canvas.drawBitmap(b,null,RectF(0f,0f,595f,842f),Paint(Paint.ANTI_ALIAS_FLAG)) } } } catch (_: Exception) {}
+                          try { contentResolver.openInputStream(this@MainActivity.background!!)?.use { android.graphics.BitmapFactory.decodeStream(it)?.let { b -> canvas.drawBitmap(b,null,RectF(0[...]
                       }
                       drawContents(canvas,pages[page],textPages[page],595f,842f)
                       selected?.let { t ->
                           val p=Paint().apply { textSize=t.size }
-                          canvas.drawRect(t.x-5,t.y-t.size,t.x+max(80f,p.measureText(t.value.take(30))+10),t.y+t.size*1.5f,Paint().apply { color=0xFF1976D2.toInt(); style=Paint.Style.STROKE; strokeWidth=1.5f })
+                          canvas.drawRect(t.x-5,t.y-t.size,t.x+max(80f,p.measureText(t.value.take(30))+10),t.y+t.size*1.5f,Paint().apply { color=0xFF1976D2.toInt(); style=Paint.Style.STROKE; stro[...]
                       }
                       canvas.restore()
                   }
