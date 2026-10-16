@@ -1,175 +1,1468 @@
-name: Build Daftar Android APK
+name: Build Najma APK
 
 on:
-  workflow_dispatch:
   push:
     branches: [main, master]
+  workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-java@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: 17
 
-      - name: Configure Android SDK (use runner SDK; no Gradle cache scan)
-        shell: bash
+      - name: Prepare Android SDK (preinstalled on runner)
         run: |
-          set -euo pipefail
-          echo "ANDROID_HOME=${ANDROID_HOME:-/usr/local/lib/android/sdk}" >> "$GITHUB_ENV"
-          echo "ANDROID_SDK_ROOT=${ANDROID_HOME:-/usr/local/lib/android/sdk}" >> "$GITHUB_ENV"
-          SDK_ROOT="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
-          if [ -x "$SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" ]; then
-            SDKMANAGER="$SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
-          elif [ -x "$SDK_ROOT/cmdline-tools/12.0/bin/sdkmanager" ]; then
-            SDKMANAGER="$SDK_ROOT/cmdline-tools/12.0/bin/sdkmanager"
-          else
-            echo "Android sdkmanager not found under $SDK_ROOT/cmdline-tools"
-            find "$SDK_ROOT" -path '*/bin/sdkmanager' -type f -print || true
-            exit 1
-          fi
-          yes | "$SDKMANAGER" --sdk_root="$SDK_ROOT" --licenses >/dev/null || true
-          "$SDKMANAGER" --sdk_root="$SDK_ROOT" \
-            'platform-tools' 'platforms;android-35' 'build-tools;35.0.0'
-          echo "PATH=$SDK_ROOT/platform-tools:$PATH" >> "$GITHUB_PATH"
+          SDKM=$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager | head -1)
+          yes | "$SDKM" --licenses > /dev/null || true
+          "$SDKM" "platforms;android-34" "build-tools;34.0.0" || true
 
-      - name: Install Gradle without scanning project cache files
-        shell: bash
+      - name: Write app (index.html)
         run: |
-          set -euo pipefail
-          GRADLE_VERSION=8.7
-          curl --fail --location --retry 3 --retry-delay 2 \
-            "https://services.gradle.org/distributions/gradle-${GRADLE_VERSION}-bin.zip" \
-            --output /tmp/gradle.zip
-          unzip -q /tmp/gradle.zip -d /tmp
-          echo "/tmp/gradle-${GRADLE_VERSION}/bin" >> "$GITHUB_PATH"
-          /tmp/gradle-${GRADLE_VERSION}/bin/gradle --version
+          mkdir -p www
+          cat > www/index.html <<'NAJMA_EOF'
+          <!doctype html>
+          <html lang="ar" dir="rtl">
+          <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+          <title>نجمة - دفتر ملاحظات بخط اليد</title>
+          <style>
+          :root{--bg:#f7f5f2;--sf:#ffffff;--tx:#1f2430;--mu:#7b8294;--ac:#2f6bff;--ln:#e6e2dc;--rd:#e5484d;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+          html{scroll-padding-top:env(safe-area-inset-top,0px)}
+          *{box-sizing:border-box}
+          html,body{height:100%;margin:0}
+          body{background:var(--bg);color:var(--tx);font:16px/1.5 system-ui,"Noto Sans Arabic",sans-serif;overscroll-behavior:none}
+          [hidden]{display:none!important}
+          button,select,input,textarea{font:inherit;color:inherit}
+          button,select{background:var(--sf);border:1px solid var(--ln);border-radius:10px;padding:6px 10px;cursor:pointer}
+          button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible,label:focus-within{outline:2px solid var(--ac);outline-offset:2px}
+          button.on{background:var(--ac);color:#fff;border-color:var(--ac)}
+          button.warn{background:var(--rd);color:#fff;border-color:var(--rd)}
+          svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;display:block}
+          .ib{display:grid;place-items:center;width:40px;height:40px;padding:0}
+          #home{height:100%;overflow:auto;padding:max(20px,env(safe-area-inset-top,0px)) 18px 120px;background:linear-gradient(180deg,#fffdfa 0,#f7f5f2 260px)}
+          .wrap{max-width:760px;margin:0 auto}
+          .hd{display:flex;align-items:center;justify-content:space-between;margin:6px 2px 18px}
+          .hd small{display:block;color:var(--mu);font-size:14px;margin-bottom:2px}
+          h1{margin:0;font-size:32px;font-weight:800;letter-spacing:-.3px;font-family:"Amiri","Noto Naskh Arabic","Noto Sans Arabic",serif}
+          .logo{width:46px;height:46px;border-radius:15px;display:grid;place-items:center;color:#fff;background:linear-gradient(145deg,#5b8cff,#2f6bff 55%,#1d4ed8);box-shadow:0 8px 18px -6px #2f6bff99}
+          .logo svg{width:24px;height:24px;fill:#fff;stroke:#fff}
+          .srch{position:relative;display:block;margin:0 0 22px}
+          .srch svg{position:absolute;inset-inline-start:14px;top:50%;margin-top:-10px;width:20px;height:20px;color:var(--mu)}
+          .srch input{width:100%;height:46px;border:1px solid var(--ln);border-radius:16px;background:#fff;padding:0 14px;padding-inline-start:44px;box-shadow:0 2px 8px #1f24300d}
+          .sec{display:flex;justify-content:space-between;align-items:baseline;margin:0 2px 12px;font-weight:700;font-size:16px}
+          .sec small{color:var(--mu);font-weight:400;font-size:13px}
+          #grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:20px 16px}
+          .card{--c:#3b5bdb;position:relative;aspect-ratio:3/4.1;padding:16px 14px 14px;padding-inline-start:24px;border:0;border-radius:8px 20px 20px 8px;background:var(--c);color:#fff;text-align:start;display:flex;flex-direction:column;justify-content:space-between;box-shadow:0 14px 24px -10px var(--sh,#0004),0 2px 6px #1f243014;overflow:hidden;transition:transform .15s}
+          .card:active{transform:scale(.97)}
+          .card::before{content:"";position:absolute;inset-block:0;inset-inline-start:0;width:13px;background:linear-gradient(90deg,#0003,#ffffff33 55%,#0000)}
+          .card::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(155deg,#ffffff47,#ffffff00 42%,#00000029)}
+          .card>*{position:relative;z-index:1}
+          .card .bd{width:30px;height:30px;border-radius:10px;background:#ffffff2e;display:grid;place-items:center}
+          .card .bd svg{width:16px;height:16px;fill:#fff;stroke:#fff}
+          .card b{font-weight:700;font-size:17px;line-height:1.35;overflow-wrap:anywhere;display:block}
+          .card small{opacity:.88;font-size:12px;display:block;margin-top:6px}
+          .empty{text-align:center;color:var(--mu);padding:48px 12px;grid-column:1/-1}
+          .empty svg{width:64px;height:64px;margin:0 auto 12px;color:#c9c3b8;fill:#e9e4da}
+          .fab{position:fixed;inset-inline-end:18px;bottom:calc(18px + env(safe-area-inset-bottom,0px));height:54px;padding:0 22px;border:0;border-radius:27px;display:flex;align-items:center;gap:8px;background:linear-gradient(145deg,#4f82ff,#2f6bff);color:#fff;font-weight:700;box-shadow:0 14px 26px -8px #2f6bffaa}
+          .fab2{position:fixed;inset-inline-start:18px;bottom:calc(18px + env(safe-area-inset-bottom,0px));width:54px;height:54px;border-radius:50%;background:#fff;color:#2f6bff;box-shadow:0 10px 22px -8px #1f243044}
+          .imb{display:flex;gap:10px;align-items:center;justify-content:flex-start;width:100%;padding:12px}
+          .fi{position:fixed;left:-99px;top:0;width:1px;height:1px;opacity:0}
+          #ed{position:relative;height:100%;display:flex;flex-direction:column}
+          .top{display:flex;gap:0;align-items:center;padding:6px 8px;background:var(--sf);border-bottom:1px solid var(--ln)}
+          .top .ib{width:31px;height:34px;background:none;border:0;border-radius:8px;color:var(--tx)}
+          .top .ib:disabled{opacity:.3}
+          .sep{width:1px;height:26px;background:var(--ln);margin-inline:4px}
+          #ttl{flex:1;min-width:50px;border:0;background:transparent;font-weight:700;font-size:17px}
+          #zl{min-width:36px;text-align:center;font-size:13px;color:var(--mu)}
+          #cloud{color:#2ecc71}
+          #mid{flex:1;min-height:0;display:flex;direction:rtl}
+          #work{flex:1;min-width:0;min-height:0;display:grid;grid-template-columns:20px minmax(0,1fr);grid-template-rows:20px minmax(0,1fr);direction:ltr}
+          #rh{grid-column:2;grid-row:1;width:100%;height:20px;display:block}
+          #rv{grid-column:1;grid-row:2;width:20px;height:100%;display:block}
+          #ed.sp #pages{padding-bottom:130px}
+          #gd{grid-column:2;grid-row:2;position:relative;z-index:4;width:100%;height:100%;pointer-events:none}
+          #pages{grid-column:2;grid-row:2;min-height:0;overflow:auto;padding:14px 14px 24px;display:flex;flex-direction:column;gap:22px;background:#ebe8e3}
+          .pw{position:relative;flex:none;margin:0 auto;box-shadow:0 2px 4px #0000000d,0 8px 24px #0000001f;border-radius:2px}
+          .pg{display:block;width:100%;aspect-ratio:210/297;height:auto;background:#fff;border-radius:2px;touch-action:none}
+          .hand .pg{touch-action:pan-x pan-y}
+          .pl{position:absolute;top:100%;left:0;right:0;margin-top:3px;text-align:center;font-size:11px;color:var(--mu);pointer-events:none}
+          #pn{position:absolute;left:10px;bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:6;display:flex;align-items:center;gap:2px;direction:ltr;background:var(--sf);border:1px solid var(--ln);border-radius:18px;padding:4px;box-shadow:0 8px 24px #1f243033}
+          #ed.sp #pn{bottom:calc(112px + env(safe-area-inset-bottom,0px))}
+          #pn button{height:34px;min-width:34px;padding:0 4px;border:0;background:none;border-radius:12px;display:grid;place-items:center;color:var(--tx)}
+          #pn svg{width:20px;height:20px}
+          #pn #pnt{min-width:58px;font-size:14px}
+          #pn button.warn{background:var(--rd);color:#fff}
+          .tb{position:absolute;border:1.5px dashed #1c7ed6;touch-action:none;cursor:move;z-index:3}
+          .tb.ed{border-style:solid;cursor:text}
+          .tb textarea{display:block;width:100%;height:100%;margin:0;padding:0;border:0;background:transparent;resize:none;overflow:hidden;line-height:1.3;caret-color:#1c7ed6;outline:0;pointer-events:none}
+          .tb.ed textarea{pointer-events:auto}
+          .rl,.rr{position:absolute;top:50%;width:12px;height:30px;margin-top:-15px;border-radius:6px;background:#1c7ed6;border:2px solid #fff;cursor:ew-resize;touch-action:none}
+          .rl{left:-8px}.rr{right:-8px}
+          .rs{position:absolute;right:-10px;bottom:-10px;width:20px;height:20px;border-radius:50%;background:#1c7ed6;border:2px solid #fff;cursor:nwse-resize;touch-action:none}
+          #tl{flex:none;width:40px;z-index:6;background:var(--sf);border-left:1px solid var(--ln);padding:8px 0;display:flex;flex-direction:column;align-items:center;gap:4px;overflow-y:auto}
+          #tl .ib{width:34px;height:34px;border:0;background:none;color:var(--mu);border-radius:10px;flex:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation}
+          #tl .ib svg{width:20px;height:20px}
+          #tl .ib.on{background:var(--ac);color:#fff}
+          #cc{width:26px;height:26px;border-radius:50%;border:2px solid var(--mu);margin:8px auto 2px;padding:0;flex:none}
+          #tl #addp{margin-top:auto;border:1px dashed #cfc9bf;color:var(--ac);background:var(--sf)}
+          #pp{position:absolute;right:46px;top:60px;width:min(310px,calc(100% - 58px));z-index:7;background:var(--sf);border:1px solid var(--ln);border-radius:18px;padding:14px;box-shadow:0 12px 32px #1f243040;display:flex;flex-direction:column;gap:10px}
+          .pr{display:flex;align-items:center;gap:10px}
+          .pr input[type=range]{flex:1;accent-color:var(--ac)}
+          .nm{min-width:4ch;text-align:center;color:var(--mu);font-size:13px}
+          .cg{display:grid;grid-template-columns:repeat(7,1fr);gap:8px}
+          .dot{position:relative;width:28px;height:28px;border-radius:50%;padding:0;border:2px solid var(--ln);display:grid;place-items:center;cursor:pointer}
+          .cg .dot{width:100%;height:auto;aspect-ratio:1}
+          .dot svg{width:16px;height:16px;color:#fff}
+          .dot.sel{outline:2px solid var(--ac);outline-offset:2px}
+          .dot input{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer}
+          #pv{width:100%;height:54px;border-radius:10px;background:#fff}
+          #st{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:6;display:flex;gap:8px;align-items:center;background:var(--sf);border:1px solid var(--ln);border-radius:18px;padding:8px;max-width:calc(100% - 16px);overflow-x:auto;box-shadow:0 8px 24px #1f243033}
+          .th{position:relative;width:54px;height:76px;padding:0;border-radius:8px;border:2px solid var(--ln);overflow:hidden;background:#fff;flex:none}
+          .th.on{border-color:var(--ac)}
+          .th canvas{width:100%;height:100%;display:block}
+          .th i{position:absolute;bottom:3px;right:3px;font-style:normal;font-size:11px;background:#555c;color:#fff;border-radius:5px;padding:0 5px}
+          .th.add{border-style:dashed;background:none;color:var(--mu);display:grid;place-items:center}
+          .ov{position:fixed;inset:0;background:#1f243073;display:grid;place-items:center;padding:16px;z-index:8}
+          .sheet{background:#fffdfa;border-radius:22px;padding:18px;box-shadow:0 12px 32px #1f243040;max-height:92vh;overflow-y:auto;width:100%;max-width:420px;display:flex;flex-direction:column;gap:12px}
+          .sheet input[type=text],.sheet select{width:100%;background:var(--bg);border:1px solid var(--ln);border-radius:10px;padding:8px 10px}
+          .row{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+          .cvs{display:flex;gap:10px;flex-wrap:wrap}
+          .cvs .dot{width:34px;height:34px}
+          .ndt{font-size:20px;font-weight:800;font-family:"Amiri","Noto Naskh Arabic","Noto Sans Arabic",serif}
+          .lb{color:var(--mu);font-size:12px;font-weight:600;margin-top:2px}
+          .tpls{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+          .tp{position:relative;padding:6px 6px 8px;border:2px solid var(--ln);border-radius:14px;background:#fff;display:flex;flex-direction:column;align-items:center;gap:6px;transition:transform .12s}
+          .tp:active{transform:scale(.96)}
+          .tp canvas{width:100%;height:auto;display:block;border-radius:8px;border:1px solid #eee9e2}
+          .tp span{font-size:13px}
+          .tp.sel{border-color:var(--ac);box-shadow:0 8px 18px -8px #2f6bff88}
+          .tp.sel span{font-weight:700}
+          .tp .ck{position:absolute;top:-7px;inset-inline-end:-7px;width:20px;height:20px;border-radius:50%;background:var(--ac);color:#fff;display:grid;place-items:center}
+          .tp .ck svg{width:12px;height:12px;stroke-width:3}
+          .sheet>*{flex:none}
+          .bds{grid-template-columns:repeat(5,1fr);gap:8px}
+          .bds .tp{padding:4px 4px 6px;border-radius:11px;gap:4px}
+          .bds .tp span{font-size:11px}
+          .bds .tp .ck{width:17px;height:17px;top:-6px}
+          .mrow{display:flex;gap:14px;align-items:center;justify-content:space-between}
+          .mc{flex:1;display:flex;flex-direction:column;gap:8px}
+          .mc input{width:64px;text-align:center;background:var(--bg);border:1px solid var(--ln);border-radius:10px;padding:6px}
+          #nbp{width:104px;height:auto;flex:none;border:1px solid var(--ln);border-radius:3px;box-shadow:0 4px 10px #1f243022;background:#fff}
+          #nscope button{flex:1}
+          .ocr{position:absolute;border:2px dashed #e5484d;background:#e5484d1a;z-index:3;pointer-events:none}
+          .tools{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:0 0 22px}
+          .tile{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 2px;border-radius:16px;border:1px solid var(--ln);background:#fff;font-size:11px;line-height:1.3;text-align:center;color:var(--tx);box-shadow:0 2px 8px #1f24300d}
+          .tile svg{width:24px;height:24px;color:var(--ac)}
+          .fld{width:100%;background:var(--bg);border:1px solid var(--ln);border-radius:10px;padding:8px 10px}
+          .svs{max-width:560px;height:min(92vh,780px);justify-content:flex-start}
+          .svh{display:flex;align-items:center;gap:8px}
+          #svb{display:flex;flex-direction:column;gap:12px}
+          #svb>*{flex:none}
+          .bigt{font-size:56px;font-weight:800;text-align:center;font-variant-numeric:tabular-nums}
+          .bar{height:8px;background:#ece8e1;border-radius:6px;overflow:hidden}
+          .bar i{display:block;height:100%;width:0;background:var(--ac)}
+          .chk{display:flex;gap:8px;align-items:center;font-size:14px}
+          .dbars{display:flex;gap:8px;align-items:flex-end;height:96px}
+          .dbars div{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:4px;height:100%;font-size:10px;color:var(--mu)}
+          .dbars i{display:block;width:100%;background:var(--ac);border-radius:6px 6px 0 0}
+          .it{display:flex;align-items:center;gap:10px;padding:10px;border:1px solid var(--ln);border-radius:14px;background:#fff}
+          .it small{display:block;color:var(--mu);font-size:12px}
+          .it .ib{width:34px;height:34px;border:0;background:none;color:var(--mu);flex:none}
+          .pill{color:#fff;border-radius:10px;padding:2px 8px;font-size:12px;white-space:nowrap}
+          .fcard{min-height:180px;border-radius:18px;border:1px solid var(--ln);background:#fff;display:grid;place-items:center;padding:18px;text-align:center;font-size:20px;white-space:pre-wrap;width:100%}
+          .gr4{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+          .alr{display:flex;gap:6px}
+          .alr button{flex:1;height:36px;display:grid;place-items:center;padding:0}
+          .alr svg{width:18px;height:18px}
+          #oca{display:flex;gap:6px;flex-wrap:wrap}
+          #toast{position:fixed;inset-inline:16px;bottom:130px;margin:auto;max-width:360px;background:#1f2430;color:#fff;border-radius:10px;padding:10px 14px;text-align:center;z-index:9}
+          </style>
+          </head>
+          <body>
+          <main id="home">
+            <div class="wrap">
+              <div class="hd"><div><small id="hi">أهلًا</small><h1>دفاتري</h1></div><div class="logo" data-i="star"></div></div>
+              <label class="srch"><span data-i="search"></span><input id="sq" type="search" aria-label="بحث في الدفاتر" placeholder="ابحث في دفاترك"></label>
+              <div class="tools" id="tools"></div>
+              <div class="sec"><span>كل الدفاتر</span><small id="cnt"></small></div>
+              <div id="grid"></div>
+            </div>
+            <button id="fab" class="fab" aria-label="دفتر جديد" title="دفتر جديد"><span data-i="plus" style="display:grid"></span>دفتر جديد</button>
+            <button id="fab2" class="fab2 ib" data-i="fileup" aria-label="استيراد PDF أو صور كدفتر جديد" title="استيراد PDF أو صور كدفتر جديد"></button>
+          </main>
 
-      - name: Generate project
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p app/src/main/java/com/daftar/notes app/src/main/res/values app/src/main/assets/tessdata
+          <section id="ed" hidden>
+            <div class="top">
+              <button id="back" class="ib" data-i="back" aria-label="الدفاتر" title="الدفاتر"></button><span class="sep"></span>
+              <input id="ttl" aria-label="عنوان الدفتر">
+              <button id="pgs" class="ib" data-i="layers" aria-label="الصفحات" title="عرض الصفحات"></button>
+              <button id="imp" class="ib" data-i="image" aria-label="استيراد خلفية أو PDF" title="استيراد خلفية أو PDF"></button>
+              <button id="re" class="ib" data-i="re" aria-label="إعادة" title="إعادة"></button>
+              <button id="un" class="ib" data-i="un" aria-label="تراجع" title="تراجع"></button>
+              <button id="zo" class="ib" data-i="zo" aria-label="تصغير" title="تصغير"></button>
+              <span id="zl">100%</span>
+              <button id="zi" class="ib" data-i="zi" aria-label="تكبير" title="تكبير"></button>
+              <button id="cov" class="ib" data-i="layout" aria-label="الغلاف والورق" title="الغلاف والورق"></button>
+              <button id="exp" class="ib" data-i="pdf" aria-label="تصدير PDF" title="تصدير PDF"></button>
+            </div>
+            <div id="mid">
+              <div id="tl">
+                <button data-t="hand" class="ib" data-i="cursor" aria-label="تحديد" title="تحديد وتمرير"></button>
+                <button data-t="pen" class="ib on" data-i="pen" aria-label="قلم" title="قلم"></button>
+                <button data-t="hl" class="ib" data-i="hl" aria-label="تمييز" title="تمييز"></button>
+                <button data-t="er" class="ib" data-i="er" aria-label="ممحاة" title="ممحاة"></button>
+                <button data-t="tx" class="ib" data-i="tx" aria-label="نص" title="نص"></button>
+                <button data-t="oc" class="ib" data-i="scan" aria-label="تحويل خط اليد إلى نص" title="تحويل خط اليد إلى نص"></button>
+                <button id="cc" aria-label="اللون" title="اللون"></button>
+                <button id="addp" class="ib" data-i="fileplus" aria-label="إضافة صفحة" title="إضافة صفحة"></button>
+              </div>
+              <div id="work"><canvas id="rh" aria-hidden="true"></canvas><canvas id="rv" aria-hidden="true"></canvas><div id="pages"></div><canvas id="gd" aria-hidden="true"></canvas></div>
+            </div>
+            <div id="pn">
+              <button id="pnp" data-i="cu" aria-label="الصفحة السابقة" title="الصفحة السابقة"></button>
+              <button id="pnt" aria-label="انتقال إلى صفحة" title="انتقال إلى صفحة">1 / 1</button>
+              <button id="pnn" data-i="cd" aria-label="الصفحة التالية" title="الصفحة التالية"></button>
+              <button id="pnd" data-i="trash" aria-label="حذف الصفحة الحالية" title="حذف الصفحة الحالية"></button>
+              <button id="pns" data-i="sliders" aria-label="خصائص الصفحة" title="خصائص الصفحة"></button>
+            </div>
+            <div id="pp" hidden></div>
+            <div id="st" hidden></div>
+          </section>
 
-          # (Optional) sample tessdata download removed to speed build; restore if needed:
-          # curl --fail --location --retry 3 "https://github.com/tesseract-ocr/tessdata_best/raw/main/ara.traineddata" -o app/src/main/assets/tessdata/ara.traineddata
+          <div id="nd" class="ov" hidden><div class="sheet">
+            <div class="ndt" id="ndt">دفتر جديد</div>
+            <div id="nscope" class="row" hidden><button data-s="one" class="on">هذه الصفحة فقط</button><button data-s="all">كل الصفحات</button></div>
+            <div id="nmeta" style="display:flex;flex-direction:column;gap:12px">
+              <input id="nt" type="text" aria-label="اسم الدفتر" placeholder="اسم الدفتر">
+              <div class="lb">لون الغلاف</div>
+              <div class="cvs" id="cvs" role="group" aria-label="لون الغلاف"></div>
+              <input id="nsub" type="text" aria-label="سطر إضافي" placeholder="سطر إضافي على الغلاف (المادة / الاسم)">
+              <div class="lb">تصميم الغلاف</div>
+              <div class="tpls" id="cst" style="grid-template-columns:repeat(3,1fr)" role="radiogroup" aria-label="تصميم الغلاف"></div>
+              <label class="chk"><input type="checkbox" id="ncon"> إظهار صفحة الغلاف في أول الدفتر</label>
+            </div>
+            <div class="lb">نوع الورق</div>
+            <input id="ntpl" type="hidden" value="lines">
+            <div class="tpls" id="tpls" role="radiogroup" aria-label="نوع الورق"></div>
+            <div class="lb">حدود الصفحة</div>
+            <input id="nbd" type="hidden" value="none"><input id="nbc" type="hidden" value="#1b2033">
+            <div class="tpls bds" id="bds" role="radiogroup" aria-label="نوع الحدود"></div>
+            <div class="cvs" id="bcs" role="group" aria-label="لون الحدود"></div>
+            <div class="mrow" id="nmr">
+              <div class="mc">
+                <div class="lb">هامش الحدود عن حافة الورقة (سم)</div>
+                <div class="pr"><button id="nbup" type="button" class="ib" aria-label="زيادة">+</button><input id="nbv" type="number" min="0" max="8" step="0.1" inputmode="decimal" aria-label="هامش الحدود بالسنتيمتر"><button id="nbdn" type="button" class="ib" aria-label="إنقاص">−</button></div>
+              </div>
+              <canvas id="nbp" width="252" height="356" aria-hidden="true"></canvas>
+            </div>
+            <button id="npin" hidden style="display:flex;gap:8px;align-items:center;justify-content:center"><span data-i="pin" style="display:grid"></span>إضافة اختصار للشاشة الرئيسية</button>
+            <div class="row"><button id="ndel" class="ib" data-i="trash" aria-label="حذف الدفتر" title="حذف الدفتر"></button><button id="nx" class="ib" data-i="x" aria-label="إلغاء"></button><button id="nok" class="ib on" data-i="check" aria-label="حفظ"></button></div>
+          </div></div>
 
-          cat > settings.gradle.kts <<'EOF'
-          import org.gradle.api.initialization.resolve.RepositoriesMode
-          pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }
-          dependencyResolutionManagement {
-              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
-              repositories { google(); mavenCentral() }
+          <div id="im" class="ov" hidden><div class="sheet">
+            <button data-m="one" class="imb"><span data-i="image" style="display:grid"></span>صورة خلفية للصفحة الحالية</button>
+            <button data-m="all" class="imb"><span data-i="image" style="display:grid"></span>صورة خلفية لكل الصفحات</button>
+            <button data-m="pdf" class="imb"><span data-i="fileup" style="display:grid"></span>إضافة صفحات من ملفات (PDF أو صور)</button>
+            <button data-m="rm1" class="imb"><span data-i="trash" style="display:grid"></span>إزالة خلفية الصفحة الحالية</button>
+            <button data-m="rma" class="imb"><span data-i="trash" style="display:grid"></span>إزالة خلفية كل الصفحات</button>
+            <div class="row"><button id="imx" class="ib" data-i="x" aria-label="إغلاق"></button></div>
+          </div></div>
+          <input type="file" id="fimg" accept="image/*,.svg,.webp,.avif,.bmp,.gif" class="fi" tabindex="-1" aria-hidden="true">
+          <input type="file" id="fpdf" accept="application/pdf,.pdf,image/*,.svg,.webp,.avif,.bmp,.gif" multiple class="fi" tabindex="-1" aria-hidden="true">
+          <div id="gp" class="ov" hidden><div class="sheet">
+            <input id="gpi" type="number" min="1" inputmode="numeric" aria-label="رقم الصفحة" placeholder="رقم الصفحة" style="width:100%;background:var(--bg);border:1px solid var(--ln);border-radius:10px;padding:8px 10px">
+            <div class="row"><button id="gpx" class="ib" data-i="x" aria-label="إلغاء"></button><button id="gpok" class="ib on" data-i="check" aria-label="انتقال"></button></div>
+          </div></div>
+          <div id="sv" class="ov" hidden><div class="sheet svs"><div class="svh"><button id="svx" class="ib" data-i="x" aria-label="إغلاق"></button><div class="ndt" id="svt"></div></div><div id="svb"></div></div></div>
+          <div id="oc" class="ov" hidden><div class="sheet">
+            <div class="ndt">تحويل خط اليد إلى نص</div>
+            <div id="ocs" class="lb"></div>
+            <div class="row" id="ocl" style="justify-content:flex-start"><button data-l="ar" class="on">عربي</button><button data-l="en">English</button></div>
+            <textarea id="oct" class="fld" dir="auto" rows="5" aria-label="النص المستخرج"></textarea>
+            <div id="oca"></div>
+            <label class="chk"><input type="checkbox" id="ocd" checked> حذف خط اليد الأصلي بعد التحويل</label>
+            <div class="row"><button id="ocx" class="ib" data-i="x" aria-label="إلغاء"></button><button id="ocok" class="ib on" data-i="check" aria-label="تحويل"></button></div>
+          </div></div>
+          <div id="toast" hidden></div>
+
+          <script>
+          const $=s=>document.querySelector(s), W=800, H=1131;
+          const P={pen:'<path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/>',
+          hl:'<path d="m9 11-6 6v3h9l3-3"/><path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"/>',
+          er:'<path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/><path d="M22 21H7"/><path d="m5 11 9 9"/>',
+          hand:'<path d="M18 11V6a2 2 0 0 0-4 0"/><path d="M14 10V4a2 2 0 0 0-4 0v2"/><path d="M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.9-6-2.3l-3.6-3.6a2 2 0 0 1 2.8-2.8L7 15"/>',
+          tx:'<path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/>',
+          un:'<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>',
+          re:'<path d="m15 14 5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/>',
+          plus:'<path d="M5 12h14"/><path d="M12 5v14"/>',back:'<path d="m9 18 6-6-6-6"/>',
+          pdf:'<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M12 18v-6"/><path d="m9 15 3 3 3-3"/>',
+          fileplus:'<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M9 15h6"/><path d="M12 12v6"/>',
+          trash:'<path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>',
+          palette:'<circle cx="13.5" cy="6.5" r=".5"/><circle cx="17.5" cy="10.5" r=".5"/><circle cx="8.5" cy="7.5" r=".5"/><circle cx="6.5" cy="12.5" r=".5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.9 0 1.5-.7 1.5-1.5 0-.4-.2-.7-.4-1-.2-.3-.4-.6-.4-1 0-.8.7-1.5 1.5-1.5H16c3.3 0 6-2.7 6-6 0-5-4.5-9-10-9Z"/>',
+          up:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/>',
+          cursor:'<path d="M4.04 4.69a.5.5 0 0 1 .65-.65l16 6.5a.5.5 0 0 1-.06.95l-6.12 1.58a2 2 0 0 0-1.44 1.43l-1.58 6.13a.5.5 0 0 1-.95.06z"/>',
+          zi:'<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/><path d="M11 8v6"/><path d="M8 11h6"/>',
+          zo:'<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/><path d="M8 11h6"/>',
+          cloud:'<path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/><path d="m9 12 2 2 4-4"/>',
+          layout:'<rect width="18" height="7" x="3" y="3" rx="1"/><rect width="9" height="7" x="3" y="14" rx="1"/><rect width="5" height="7" x="16" y="14" rx="1"/>',
+          broom:'<path d="m16 22-1-4"/><path d="M19 14a1 1 0 0 0 1-1v-1a2 2 0 0 0-2-2h-3a1 1 0 0 1-1-1V4a2 2 0 0 0-4 0v5a1 1 0 0 1-1 1H6a2 2 0 0 0-2 2v1a1 1 0 0 0 1 1"/><path d="M5 14h14l2 6.8a1 1 0 0 1-1 1.2H4a1 1 0 0 1-1-1.2z"/><path d="m8 22 1-4"/>',
+          pin:'<path d="M12 17v5"/><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/>',
+          image:'<rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>',
+          fileup:'<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M12 12v6"/><path d="m15 15-3-3-3 3"/>',
+          layers:'<path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/>',
+          star:'<path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z"/>',book:'<path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/>',search:'<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+          cu:'<path d="m18 15-6-6-6 6"/>',cd:'<path d="m6 9 6 6 6-6"/>',
+          sliders:'<path d="M4 21v-7"/><path d="M4 10V3"/><path d="M12 21v-9"/><path d="M12 8V3"/><path d="M20 21v-5"/><path d="M20 12V3"/><path d="M1 14h6"/><path d="M9 8h6"/><path d="M17 16h6"/>',timer:'<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2"/><path d="M9 2h6"/>',cards:'<rect x="3" y="7" width="14" height="14" rx="2"/><path d="M7 7V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-2"/>',cal:'<rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/><path d="m9 16 2 2 4-4"/>',table:'<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/><path d="M9 3v18"/><path d="M15 3v18"/>',alL:'<path d="M3 6h18"/><path d="M3 12h12"/><path d="M3 18h16"/>',alC:'<path d="M3 6h18"/><path d="M7 12h10"/><path d="M5 18h14"/>',alR:'<path d="M3 6h18"/><path d="M9 12h12"/><path d="M5 18h16"/>',scan:'<path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 8h8"/><path d="M7 12h10"/><path d="M7 16h6"/>',check:'<path d="M20 6 9 17l-5-5"/>',x:'<path d="M18 6 6 18"/><path d="m6 6 12 12"/>'};
+          const ic=n=>'<svg viewBox="0 0 24 24" aria-hidden="true">'+P[n]+'</svg>';
+          document.querySelectorAll('[data-i]').forEach(b=>b.innerHTML=ic(b.dataset.i));
+
+          let S={notes:[],cc:[],fonts:[],st:null,tp:null};
+          const dirty=new Set();let dirtyMeta=false,gone=[];
+          const save=n=>{const t=n||cur;if(t)dirty.add(t);clearTimeout(save.d);save.d=setTimeout(flush,600);if(cur){clearTimeout(save.t);save.t=setTimeout(strip,250)}};
+          const saveMeta=()=>{dirtyMeta=true;save()};
+          const saveTools=()=>{S.tp={tool,T:{pen:T.pen,hl:T.hl,er:T.er,tx:T.tx}};dirtyMeta=true;clearTimeout(save.d);save.d=setTimeout(flush,500)};
+          async function flush(){
+            clearTimeout(save.d);const ns=[...dirty],meta=dirtyMeta,g=gone;dirty.clear();dirtyMeta=false;gone=[];
+            if(!ns.length&&!meta&&!g.length)return;
+            try{
+              const d=await idb();
+              await new Promise((ok,no)=>{const t=d.transaction('kv','readwrite'),o=t.objectStore('kv');
+                ns.forEach(n=>o.put(n,'note:'+n.id));if(meta)o.put({cc:S.cc,fonts:S.fonts,st:S.st,tp:S.tp},'meta');g.forEach(id=>o.delete('note:'+id));
+                t.oncomplete=ok;t.onerror=t.onabort=()=>no(t.error)});
+            }catch(e){
+              ns.forEach(n=>dirty.add(n));dirtyMeta=dirtyMeta||meta;
+              try{localStorage.setItem('najma2',JSON.stringify(S))}catch(er){toast('تعذّر الحفظ: ذاكرة التطبيق ممتلئة')}
+            }
           }
-          rootProject.name = "Daftar"
-          include(":app")
-          EOF
-
-          cat > build.gradle.kts <<'EOF'
-          plugins {
-              id("com.android.application") version "8.6.1" apply false
-              id("org.jetbrains.kotlin.android") version "2.0.21" apply false
+          async function initStore(){
+            try{
+              const d=await idb();
+              const all=await new Promise((res,no)=>{const out=[],c=d.transaction('kv').objectStore('kv').openCursor();c.onsuccess=()=>{const u=c.result;if(u){out.push([u.key,u.value]);u.continue()}else res(out)};c.onerror=()=>no(c.error)});
+              all.forEach(([k,v])=>{if(k==='meta'){S.cc=v.cc||[];S.fonts=v.fonts||[];S.st=v.st||null;S.tp=v.tp||null}else if(String(k).startsWith('note:'))S.notes.push(v)});
+            }catch(e){}
+            if(!S.notes.length){
+              try{const o=JSON.parse(localStorage.getItem('najma2'));
+                if(o&&o.notes&&o.notes.length){S.notes=o.notes;S.cc=o.cc||[];S.fonts=o.fonts||[];S.notes.forEach(n=>dirty.add(n));dirtyMeta=true;await flush();if(!dirty.size)localStorage.removeItem('najma2')}}catch(e){}
+            }
+            S.st=Object.assign(STD(),S.st||{});
+            if(S.tp){try{const sv=S.tp.T||{};['pen','hl','er','tx'].forEach(k=>{if(sv[k])Object.assign(T[k],sv[k])});if(['pen','hl','er','tx','hand','oc'].includes(S.tp.tool))tool=S.tp.tool}catch(e){}}
+            S.fonts.forEach(f=>loadFont(f).then(()=>cur&&cv.forEach((_,i)=>rp(i))));
           }
-          EOF
+          document.addEventListener('visibilitychange',()=>{if(document.hidden)flush()});addEventListener('pagehide',flush);
+          const COLORS=['#1b2033','#d6336c','#3b5bdb','#2f9e44','#f08c00','#f7d84a'];
+          const COVERS=['#34509c','#9b2f57','#1f7a5c','#c2662d','#5f3dc4','#0c7c8c','#3b4252','#b02a37'];
+          const BASE=[['sans-serif','عادي'],['serif','سيريف'],['monospace','أحادي'],['cursive','يدوي']];
+          const T={pen:{c:'#1b2033',w:3,a:1},hl:{c:'#f7d84a',w:3,a:.4},er:{w:8},tx:{c:'#1b2033',z:32,f:'sans-serif',a:'auto'}};
+          const PAL=['#f59f00','#fd7e14','#e03131','#ffffff','#8d99ae','#4b5563','#111827','#3b82f6','#38bdf8','#06b6d4','#14b8a6','#22c55e','#84cc16','#facc15','#92400e','#fb7185','#ec4899','#c026d3','#8b5cf6','#6366f1'];
+          let Z=1,ocd=null,oc=null,olang='ar';
+          let cur=null,tool='pen',undo=[],redo=[],cv=[],ap=0,dr=null,raf=0,delArm=false,nmode='new',ncv=COVERS[0];
 
-          echo 'org.gradle.jvmargs=-Xmx3g -Dfile.encoding=UTF-8
-          android.useAndroidX=true
-          kotlin.code.style=official' > gradle.properties
+          function toast(m){const t=$('#toast');t.textContent=m;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>t.hidden=true,3000)}
+          function b64buf(d){const s=atob(d),a=new Uint8Array(s.length);for(let i=0;i<s.length;i++)a[i]=s.charCodeAt(i);return a.buffer}
+          async function loadFont(f){try{const ff=new FontFace(f.n,b64buf(f.d));await ff.load();document.fonts.add(ff);return true}catch(e){return false}}
 
-          cat > app/build.gradle.kts <<'EOF'
-          plugins {
-              id("com.android.application")
-              id("org.jetbrains.kotlin.android")
+          const BORDERS=[['none','بلا'],['solid','خط'],['thick','سميك'],['double','مزدوج'],['dashed','متقطع'],['dotted','منقّط'],['round','دائري'],['corner','زوايا'],['classic','كلاسيك']];
+          const BCOL=['#1b2033','#4b5563','#3b5bdb','#d6336c','#2f9e44','#c2662d','#b8860b'];
+          function drawBorder(x,b,k){
+            k=k||1;const m=(b.m==null?2:b.m)*W/21,X=m,Y=m,w=W-2*m,h=H-2*m;
+            x.save();x.strokeStyle=x.fillStyle=b.c;x.lineJoin='miter';x.lineCap='butt';x.setLineDash([]);x.globalAlpha=1;x.globalCompositeOperation='source-over';
+            const R=(a,c,d,e)=>{x.beginPath();x.rect(a,c,d,e);x.stroke()};
+            const RR=(a,c,d,e,r)=>{x.beginPath();x.moveTo(a+r,c);x.arcTo(a+d,c,a+d,c+e,r);x.arcTo(a+d,c+e,a,c+e,r);x.arcTo(a,c+e,a,c,r);x.arcTo(a,c,a+d,c,r);x.closePath();x.stroke()};
+            switch(b.t){
+              case'solid':x.lineWidth=2*k;R(X,Y,w,h);break;
+              case'thick':x.lineWidth=7*k;R(X,Y,w,h);break;
+              case'double':x.lineWidth=3*k;R(X,Y,w,h);x.lineWidth=1.3*k;R(X+9*k,Y+9*k,w-18*k,h-18*k);break;
+              case'dashed':x.lineWidth=2.5*k;x.setLineDash([14*k,9*k]);R(X,Y,w,h);break;
+              case'dotted':x.lineWidth=3.4*k;x.lineCap='round';x.setLineDash([.1,9*k]);R(X,Y,w,h);break;
+              case'round':x.lineWidth=2.5*k;RR(X,Y,w,h,30);break;
+              case'corner':{x.lineWidth=4.5*k;const L=60;[[X,Y,1,1],[X+w,Y,-1,1],[X,Y+h,1,-1],[X+w,Y+h,-1,-1]].forEach(([a,c,sx,sy])=>{x.beginPath();x.moveTo(a+sx*L,c);x.lineTo(a,c);x.lineTo(a,c+sy*L);x.stroke()});break}
+              case'classic':{x.lineWidth=4*k;R(X,Y,w,h);x.lineWidth=1.2*k;R(X+10*k,Y+10*k,w-20*k,h-20*k);const s=13*k;[[X,Y],[X+w,Y],[X,Y+h],[X+w,Y+h]].forEach(([a,c])=>x.fillRect(a-s/2,c-s/2,s,s));break}
+            }
+            x.restore();
+          }
+          const ptpl=pg=>pg.tpl||cur.tpl, pbd=pg=>pg.bd||cur.bd;
+          const bdr=(x,b)=>{if(b&&b.t&&b.t!=='none')drawBorder(x,b)};
+          const bdVal=()=>{const t=$('#nbd').value;return t==='none'?undefined:{t,c:$('#nbc').value,m:getM()}};
+          function bdRender(){
+            const g=$('#bds'),v=$('#nbd').value,col=$('#nbc').value,cs=$('#bcs');g.innerHTML='';cs.innerHTML='';cs.hidden=v==='none';$('#nmr').hidden=v==='none';setTimeout(nprev);
+            BORDERS.forEach(([k,l])=>{
+              const b=document.createElement('button');b.type='button';b.className='tp'+(k===v?' sel':'');b.setAttribute('role','radio');b.setAttribute('aria-checked',k===v);
+              const c=document.createElement('canvas');c.width=160;c.height=224;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,160,224);
+              x.setTransform(160/W,0,0,160/W,0,0);if(k!=='none')drawBorder(x,{t:k,c:col==='#ffffff'?'#1b2033':col,m:getM()},2.6);
+              b.append(c);const t=document.createElement('span');t.textContent=l;b.append(t);
+              if(k===v){const ck=document.createElement('i');ck.className='ck';ck.innerHTML=ic('check');b.append(ck)}
+              b.onclick=()=>{$('#nbd').value=k;bdRender()};g.append(b);
+            });
+            BCOL.forEach(c=>{const d=document.createElement('button');d.type='button';d.className='dot'+(c===col?' sel':'');d.style.background=c;d.setAttribute('aria-label','لون '+c);d.style.width=d.style.height='30px';d.onclick=()=>{$('#nbc').value=c;bdRender()};cs.append(d)});
+          }
+          function paper(x,t,bg,b){
+            x.fillStyle='#fff';x.fillRect(0,0,W,H);
+            if(bg){const k=Math.min(W/bg.naturalWidth,H/bg.naturalHeight);x.drawImage(bg,(W-bg.naturalWidth*k)/2,(H-bg.naturalHeight*k)/2,bg.naturalWidth*k,bg.naturalHeight*k);bdr(x,b);return}
+            x.strokeStyle=x.fillStyle='#cfd6ea';x.lineWidth=1;
+            if(t==='lines')for(let y=80;y<H;y+=36){x.beginPath();x.moveTo(0,y);x.lineTo(W,y);x.stroke()}
+            if(t==='grid'){for(let y=0;y<H;y+=32){x.beginPath();x.moveTo(0,y);x.lineTo(W,y);x.stroke()}for(let i=0;i<W;i+=32){x.beginPath();x.moveTo(i,0);x.lineTo(i,H);x.stroke()}}
+            if(t==='dots')for(let y=32;y<H;y+=32)for(let i=32;i<W;i+=32)x.fillRect(i-1,y-1,2,2);
+            bdr(x,b);
+          }
+          function stroke(x,s){
+            if(s.hid)return;
+            x.save();x.lineCap=x.lineJoin='round';
+            if(s.t==='tx'){
+              if(!s.w){s.w=s.bw||300;s.h=s.bh||s.z*1.4}
+              x.font=s.z+'px "'+s.f+'",sans-serif';x.fillStyle=s.c;x.textBaseline='top';
+              const rt=/[\u0600-\u06FF]/.test(s.s);x.direction=rt?'rtl':'ltr';const al=s.a&&s.a!=='auto'?s.a:(rt?'r':'l'),px=al==='r'?s.x+s.w:al==='c'?s.x+s.w/2:s.x;x.textAlign=al==='r'?'right':al==='c'?'center':'left';
+              wrap(x,s.s,s.w).forEach((l,i)=>x.fillText(l,px,s.y+i*s.z*1.3+s.z*.1));
+              x.restore();return;
+            }
+            const p=s.p;x.strokeStyle=x.fillStyle=s.c;x.globalAlpha=s.a||1;
+            if(s.t==='hl'){
+              x.globalAlpha=s.a||.4;x.globalCompositeOperation='multiply';x.lineWidth=s.w*4;
+              x.beginPath();x.moveTo(p[0][0],p[0][1]);if(p.length===1)x.lineTo(p[0][0]+.1,p[0][1]);
+              for(let i=1;i<p.length;i++)x.lineTo(p[i][0],p[i][1]);x.stroke();
+            }else if(p.length===1){x.beginPath();x.arc(p[0][0],p[0][1],s.w*.6,0,7);x.fill()}
+            else for(let i=1;i<p.length;i++){
+              const a=i>1?p[i-2]:p[0],b=p[i-1],c=p[i];x.lineWidth=s.w*(.6+c[2]*.8);
+              x.beginPath();x.moveTo((a[0]+b[0])/2,(a[1]+b[1])/2);x.quadraticCurveTo(b[0],b[1],(b[0]+c[0])/2,(b[1]+c[1])/2);x.stroke();
+            }
+            x.restore();
+          }
+          function wrap(x,t,w){const o=[];t.split('\n').forEach(p=>{let l='';p.split(' ').forEach(d=>{const n=l?l+' '+d:d;if(l&&x.measureText(n).width>w){o.push(l);l=d}else l=n});o.push(l)});return o}
+          const gctx=c=>c.getContext('2d',{alpha:false,desynchronized:true});
+          const lc=document.createElement('canvas');let lcPage=-1,io=null;
+          const rp=i=>{const c=cv[i];if(!c||!c._on)return;if(i===lcPage)lcPage=-1;const x=gctx(c);x.setTransform(2,0,0,2,0,0);paper(x,ptpl(cur.pages[i]),bgFor(cur.pages[i]),pbd(cur.pages[i]));cur.pages[i].strokes.forEach(s=>stroke(x,s))};
+          function act(i,on){
+            const c=cv[i];if(!c||c._on===on)return;c._on=on;
+            if(on){c.width=W*2;c.height=H*2;rp(i)}
+            else{c.width=1;c.height=1;if(i===lcPage)lcPage=-1;const b=cur.pages[i].bg;if(b&&!cv.some((q,j)=>j!==i&&q._on&&cur.pages[j].bg===b))BG.delete(b)}
+          }
+          function lf(i){
+            const c=cv[i];if(!c||!c._on||!dr||!dr.s)return;
+            if(lcPage!==i){lc.width=W*2;lc.height=H*2;const y=gctx(lc);y.setTransform(2,0,0,2,0,0);paper(y,ptpl(cur.pages[i]),bgFor(cur.pages[i]),pbd(cur.pages[i]));cur.pages[i].strokes.forEach(s=>{if(s!==dr.s)stroke(y,s)});lcPage=i}
+            const x=gctx(c);x.setTransform(1,0,0,1,0,0);x.drawImage(lc,0,0);x.setTransform(2,0,0,2,0,0);stroke(x,dr.s);
+          }
+          const simp=p=>p.map(q=>[Math.round(q[0]*10)/10,Math.round(q[1]*10)/10,Math.round(q[2]*100)/100]);
+
+          function home(){
+            cur=null;BG.clear();TH.clear();cv=[];if(io)io.disconnect();lc.width=1;lc.height=1;lcPage=-1;$('#home').hidden=false;$('#ed').hidden=true;$('#pp').hidden=true;
+            const hr=new Date().getHours();$('#hi').textContent=hr<12?'صباح الخير':hr<18?'نهارك سعيد':'مساء الخير';
+            const q=($('#sq').value||'').trim().toLowerCase(),all=S.notes.slice().sort((a,b)=>b.u-a.u),list=q?all.filter(n=>n.title.toLowerCase().includes(q)):all;
+            $('#cnt').textContent=all.length+' دفتر';renderTools();
+            const g=$('#grid');g.innerHTML='';
+            if(!list.length)g.innerHTML='<div class="empty">'+ic('book')+'<div>'+(q?'لا توجد نتائج مطابقة':'لا توجد دفاتر بعد. اضغط «دفتر جديد» لتبدأ.')+'</div></div>';
+            list.forEach(n=>{
+              const d=document.createElement('button');d.className='card';d.style.setProperty('--c',n.cv);d.style.setProperty('--sh',n.cv+'99');
+              d.innerHTML='<span class="bd">'+ic('star')+'</span><span><b></b><small></small></span>';d.querySelector('b').textContent=n.title;
+              d.querySelector('small').textContent=n.pages.length+' صفحة';
+              d.onclick=()=>openNote(n.id);g.append(d);
+            });
+          }
+          function openNote(id){
+            cur=S.notes.find(n=>n.id===id);undo=[];redo=[];ap=0;delArm=false;$('#ndel').classList.remove('warn');
+            cur.pages.forEach(p=>p.strokes.forEach(s=>s.hid=false));$('#home').hidden=true;$('#ed').hidden=false;$('#ttl').value=cur.title;fitZoom();buildPages();applyZoom();setTool(tool);strip();
+          }
+          function buildPages(){
+            const b=$('#pages');b.innerHTML='';cv=[];sel=null;box=null;lcPage=-1;lc.width=1;lc.height=1;if(io)io.disconnect();
+            io=new IntersectionObserver(es=>es.forEach(e=>act(+e.target.dataset.i,e.isIntersecting)),{root:b,rootMargin:'120% 0px 120% 0px'});
+            if(cur.co!==false){const w=document.createElement('div');w.className='pw';w.style.width=794*Z+'px';const c=document.createElement('canvas');c.className='pg';c.width=W;c.height=H;c.style.touchAction='pan-x pan-y';c.style.cursor='pointer';drawCover(c.getContext('2d'),cur);c.onclick=()=>noteDlg('edit');w.append(c);const l=document.createElement('div');l.className='pl';l.textContent='الغلاف';w.append(l);b.append(w)}
+            cur.pages.forEach((pg,i)=>{
+              const w=document.createElement('div');w.className='pw';w.style.width=794*Z+'px';
+              const c=document.createElement('canvas');c.className='pg';c.width=1;c.height=1;c._on=false;c.dataset.i=i;
+              const pt=e=>{const r=c.getBoundingClientRect();return[(e.clientX-r.left)/r.width*W,(e.clientY-r.top)/r.height*H,e.pointerType==='pen'?(e.pressure||.5):.5]};
+              c.onpointerdown=e=>{
+                $('#pp').hidden=true;ap=i;if(!c._on)act(i,true);const q=pt(e);
+                const hit=()=>[...pg.strokes].reverse().find(s=>s.t==='tx'&&q[0]>=s.x&&q[0]<=s.x+s.w&&q[1]>=s.y&&q[1]<=s.y+s.h);
+                if(tool==='hand'){const h=hit();if(h){e.preventDefault();lt=performance.now();showBox(i,h,false)}else if(sel)deselect();actv();return}
+                e.preventDefault();
+                if(tool==='oc'){c.setPointerCapture(e.pointerId);const rc=document.createElement('div');rc.className='ocr';c.parentNode.append(rc);ocd={i,id:e.pointerId,x:q[0],y:q[1],x1:q[0],y1:q[1],rc};return}
+                if(tool==='tx'){
+                  const h=hit();actv();
+                  if(h){lt=performance.now();showBox(i,h,false)}
+                  else if(sel)deselect();
+                  else{snap(i);const z=T.tx,n={t:'tx',s:'',x:Math.max(0,Math.min(q[0],W-320)),y:Math.max(0,Math.min(q[1],H-60)),w:320,h:Math.max(48,z.z*1.6),c:z.c,z:z.z,f:z.f,a:z.a};pg.strokes.push(n);showBox(i,n,true)}
+                  return;
+                }
+                c.setPointerCapture(e.pointerId);snap(i);dr={i,id:e.pointerId,ch:false};
+                if(tool==='er')dr.ch=erase(pg,q[0],q[1]);
+                else{dr.s={t:tool,c:T[tool].c,w:T[tool].w,a:T[tool].a,p:[q]};pg.strokes.push(dr.s)}
+                sched(i);
+              };
+              c.onpointermove=e=>{
+                if(ocd&&ocd.id===e.pointerId&&ocd.i===i){const q=pt(e),k=c.clientWidth/W;ocd.x1=q[0];ocd.y1=q[1];Object.assign(ocd.rc.style,{left:Math.min(ocd.x,q[0])*k+'px',top:Math.min(ocd.y,q[1])*k+'px',width:Math.abs(q[0]-ocd.x)*k+'px',height:Math.abs(q[1]-ocd.y)*k+'px'});return}
+                if(!dr||dr.id!==e.pointerId||dr.i!==i)return;
+                (e.getCoalescedEvents?e.getCoalescedEvents():[e]).forEach(ev=>{const q=pt(ev);if(tool==='er'){if(erase(pg,q[0],q[1]))dr.ch=true}else{const L=dr.s.p[dr.s.p.length-1];if(!L||Math.hypot(q[0]-L[0],q[1]-L[1])>=.6)dr.s.p.push(q)}});
+                sched(i);
+              };
+              const up=e=>{if(ocd&&ocd.id===e.pointerId){const o=ocd;ocd=null;o.rc.remove();if(e.type==='pointercancel')return;const x0=Math.min(o.x,o.x1),x1=Math.max(o.x,o.x1),y0=Math.min(o.y,o.y1),y1=Math.max(o.y,o.y1);ocrStart(i,(x1-x0<14&&y1-y0<14)?null:{x0,x1,y0,y1});return}
+                if(!dr||dr.id!==e.pointerId)return;if(tool==='er'&&!dr.ch)undo.pop();
+                if(dr.s){cancelAnimationFrame(raf);dr.s.p=simp(dr.s.p);lf(i);if(lcPage===i){const y=gctx(lc);y.setTransform(2,0,0,2,0,0);stroke(y,dr.s)}}
+                dr=null;cur.u=Date.now();save()};
+              c.onpointerup=up;c.onpointercancel=up;w.append(c);{const l=document.createElement('div');l.className='pl';l.textContent='صفحة '+(i+1)+' من '+cur.pages.length;w.append(l)}b.append(w);cv.push(c);io.observe(c);
+            });
+          }
+          const snap=i=>{undo.push([i,JSON.stringify(cur.pages[i].strokes)]);let tot=undo.reduce((a,t)=>a+t[1].length,0);while(undo.length>1&&(undo.length>60||tot>6e6))tot-=undo.shift()[1].length;redo=[]};
+          function erase(pg,x,y){
+            const n=pg.strokes.length,r=T.er.w*1.5+6;
+            pg.strokes=pg.strokes.filter(s=>s.t==='tx'||!s.p.some(q=>Math.hypot(q[0]-x,q[1]-y)<r));
+            return pg.strokes.length!==n;
+          }
+          const sched=i=>{cancelAnimationFrame(raf);raf=requestAnimationFrame(()=>dr&&dr.s?lf(i):rp(i))};
+          function swap(a,b){const t=a.pop();if(!t)return;b.push([t[0],JSON.stringify(cur.pages[t[0]].strokes)]);cur.pages[t[0]].strokes=JSON.parse(t[1]).map(s=>(s.hid=false,s));rp(t[0]);save()}
+
+          function setTool(t){
+            deselect();const chT=t!==tool;tool=t;if(chT)saveTools();document.querySelectorAll('[data-t]').forEach(x=>x.classList.toggle('on',x.dataset.t===t));
+            $('#pages').classList.toggle('hand',t==='hand');ccUpd();if(t==='oc')toast('اسحب لتحديد خط اليد، أو المس مرة واحدة لتحويل كل الصفحة');if(t==='hand'||t==='oc')$('#pp').hidden=true;else if(!$('#pp').hidden)opts();
+          }
+          const ccUpd=()=>$('#cc').style.background=((T[tool]||T.pen).c||T.pen.c);
+          function pv(){
+            const c=$('#pv');if(!c)return;const x=c.getContext('2d'),s=T[tool];x.setTransform(2,0,0,2,0,0);x.clearRect(0,0,c.width,c.height);
+            if(tool==='tx'){x.fillStyle=s.c;x.font=Math.min(s.z,40)+'px "'+s.f+'",sans-serif';x.textBaseline='middle';x.direction='ltr';x.textAlign='left';x.fillText('أبجد Abc',16,27)}
+            else if(tool==='er'){x.strokeStyle='#8a93ab';x.lineWidth=2;x.beginPath();x.arc(140,27,Math.min(24,s.w*.8+4),0,7);x.stroke()}
+            else{const p=[];for(let i=0;i<40;i++)p.push([20+i*6.5,27+Math.sin(i/4)*12,.5]);stroke(x,{t:tool,c:s.c,w:s.w,a:s.a,p})}
+          }
+          function opts(){
+            const o=$('#pp'),s=T[tool];o.innerHTML='';if(tool==='hand'||tool==='oc'){o.hidden=true;return}
+            const h=document.createElement('div');h.style.cssText='color:var(--mu);font-size:14px';h.textContent={pen:'سمك القلم',hl:'سمك المحدد',er:'حجم الممحاة',tx:'حجم الخط'}[tool];o.append(h);
+            const sl=(k,mn,mx,lab,f)=>{const r=document.createElement('div'),i=document.createElement('input'),z=k==='z',n=document.createElement(z?'input':'span');r.className='pr';n.className='nm';
+              Object.assign(i,{type:'range',min:mn,max:mx,step:k==='a'?.05:1,value:s[k]});i.setAttribute('aria-label',lab);
+              if(z){Object.assign(n,{type:'number',min:mn,max:mx,value:s[k]});n.setAttribute('aria-label','حجم الخط بالأرقام');n.style.cssText='width:64px;background:var(--bg);border:1px solid var(--ln);border-radius:8px;padding:4px'}else n.textContent=f(s[k]);
+              const set=v=>{v=Math.max(mn,Math.min(mx,Math.round(+v)||mn));s[k]=v;i.value=v;if(z)n.value=v;else n.textContent=f(v);applyTx();pv();saveTools()};
+              i.oninput=()=>{if(k==='a'){s[k]=+i.value;n.textContent=f(s[k]);pv();saveTools()}else set(i.value)};if(z)n.onchange=()=>set(n.value);
+              r.append(i,n);
+              if(z){const b=(t,d)=>{const x=document.createElement('button');x.textContent=t;x.setAttribute('aria-label',d>0?'تكبير الخط':'تصغير الخط');x.style.cssText='width:34px;height:34px;padding:0;font-size:18px';x.onclick=()=>set(s[k]+d);return x};r.prepend(b('+',2));r.append(b('−',-2))}
+              o.append(r)};
+            const id=v=>v,pc=v=>Math.round(v*100)+'%';
+            if(tool==='tx')sl('z',8,200,'حجم الخط',id);else if(tool==='er')sl('w',2,40,'حجم الممحاة',id);
+            else{sl('w',1,24,'السمك',id);sl('a',.1,1,'الشفافية',pc)}
+            if(tool!=='er'){
+              const g=document.createElement('div');g.className='cg';
+              const l=document.createElement('label');l.className='dot';l.style.background='conic-gradient(#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00)';l.title='لون إضافي';l.innerHTML=ic('plus')+'<input type="color" aria-label="لون إضافي">';
+              const pick=c=>{s.c=c;ccUpd();opts();applyTx();saveTools()};
+              l.querySelector('input').onchange=e=>{const c=e.target.value;if(!PAL.includes(c)&&!S.cc.includes(c)){S.cc.push(c);if(S.cc.length>7)S.cc.shift();saveMeta()}pick(c)};
+              g.append(l);
+              [...PAL,...S.cc].forEach(c=>{const d=document.createElement('button');d.className='dot'+(s.c===c?' sel':'');d.style.background=c;d.setAttribute('aria-label','لون '+c);d.onclick=()=>pick(c);g.append(d)});
+              o.append(g);
+            }
+            if(tool==='tx'){
+              const al=document.createElement('div');al.className='alr';
+              [['r','alR','محاذاة لليمين'],['c','alC','توسيط'],['l','alL','محاذاة لليسار']].forEach(([v,i,t])=>{const b=document.createElement('button');b.type='button';b.innerHTML=ic(i);b.title=t;b.setAttribute('aria-label',t);b.className=s.a===v?'on':'';b.onclick=()=>{s.a=s.a===v?'auto':v;applyTx();opts();saveTools()};al.append(b)});o.append(al);
+              const r=document.createElement('div');r.className='pr';
+              const f=document.createElement('select');f.setAttribute('aria-label','الخط');f.style.flex='1';
+              [...BASE,...S.fonts.map(x=>[x.n,x.n])].forEach(([v,l])=>{const op=new Option(l,v);op.selected=v===s.f;f.add(op)});
+              f.onchange=()=>{s.f=f.value;applyTx();pv();saveTools()};
+              const u=document.createElement('label');u.className='ib';u.style.cssText='border:1px solid var(--ln);border-radius:10px;position:relative;cursor:pointer';u.title='استيراد خط';
+              u.innerHTML=ic('up')+'<input type="file" multiple style="position:absolute;inset:0;opacity:0;cursor:pointer" aria-label="استيراد خط">';
+              u.querySelector('input').onchange=impFont;r.append(f,u);o.append(r);
+            }
+            const c=document.createElement('canvas');c.id='pv';c.width=560;c.height=108;o.append(c);pv();
+          }
+          async function impFont(e){
+            const files=[...e.target.files];e.target.value='';let ok=0;const bad=[];
+            for(const file of files){
+              const d=await new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(String(fr.result).split(',')[1]||'');fr.onerror=()=>r('');fr.readAsDataURL(file)});
+              const f={n:file.name.replace(/\.[^.]+$/,'').replace(/["\\]/g,'').slice(0,24)||'خط',d};
+              if(d&&await loadFont(f)){S.fonts=S.fonts.filter(x=>x.n!==f.n);S.fonts.push(f);T.tx.f=f.n;ok++}else bad.push(file.name.split('.').pop().toUpperCase());
+            }
+            if(ok){saveMeta();saveTools();opts();applyTx();cv.forEach((_,i)=>rp(i))}
+            toast(ok?'تمت إضافة '+ok+' خط'+(bad.length?' - غير مدعوم: '+bad.join('، '):''):'صيغة غير مدعومة ('+bad.join('، ')+'). المدعوم: TTF وOTF وWOFF وWOFF2');
           }
 
-          android {
-              namespace = "com.daftar.notes"
-              compileSdk = 35
-              defaultConfig {
-                  applicationId = "com.daftar.notes"
-                  minSdk = 26
-                  targetSdk = 35
-                  versionCode = 1
-                  versionName = "1.0"
+          let sel=null,selI=0,lt=0,box=null,gdOn=false,gdSn=[0,0];
+          const ks=()=>cv[selI].clientWidth/W;
+          function place(){const k=ks(),ta=box.querySelector('textarea');
+            Object.assign(ta.style,{fontFamily:'"'+sel.f+'",sans-serif',fontSize:sel.z*k+'px',color:sel.c,textAlign:({r:'right',c:'center',l:'left'})[sel.a]||'',height:'0px'});
+            Object.assign(box.style,{left:sel.x*k+'px',top:sel.y*k+'px',width:sel.w*k+'px'});
+            sel.h=Math.min(H-sel.y,Math.max(sel.z*1.3,ta.scrollHeight/k));
+            box.style.height=sel.h*k+'px';ta.style.height='100%';if(gdOn)rq()}
+          function applyTx(){if(tool==='tx'&&sel){const o=sel.z;Object.assign(sel,{c:T.tx.c,z:T.tx.z,f:T.tx.f,a:T.tx.a});if(sel.z!==o)sel.w=Math.max(40,Math.min(W-sel.x,sel.w*sel.z/o));place()}}
+          function deselect(){
+            if(!sel)return;const s=sel,i=selI;
+            if(box.classList.contains('ed'))s.s=box.querySelector('textarea').value;
+            s.hid=false;box.remove();box=null;sel=null;$('#pages').style.paddingBottom='';
+            if(!s.s.trim())cur.pages[i].strokes=cur.pages[i].strokes.filter(x=>x!==s);
+            rp(i);cur.u=Date.now();save();
+          }
+          function delBox(){
+            if(!sel)return;const i=selI,s=sel;snap(i);s.hid=false;box.remove();box=null;sel=null;$('#pages').style.paddingBottom='';
+            cur.pages[i].strokes=cur.pages[i].strokes.filter(x=>x!==s);rp(i);cur.u=Date.now();save();
+          }
+          document.addEventListener('keydown',e=>{
+            if(!sel||box.classList.contains('ed')||/INPUT|SELECT|TEXTAREA/.test((e.target||{}).tagName||''))return;
+            if(e.key==='Delete'||e.key==='Backspace'){
+              e.preventDefault();const ta=box.querySelector('textarea');
+              if(!ta.value){delBox();return}
+              snap(selI);box.classList.add('ed');ta.focus({preventScroll:true});
+              ta.value=ta.value.slice(0,-1);sel.s=ta.value;place();
+            }
+          });
+          function reveal(){
+            if(!sel||!box||document.activeElement!==box.querySelector('textarea'))return;
+            const P=$('#pages'),pr=P.getBoundingClientRect(),vv=window.visualViewport;
+            const bottom=Math.min(pr.bottom,vv?vv.offsetTop+vv.height:innerHeight),top=pr.top,av=bottom-top;
+            P.style.paddingBottom=Math.round(Math.max(130,av*.9))+'px';
+            const b=box.getBoundingClientRect(),gap=Math.max(48,av*.2);
+            if(b.top<top+16||b.bottom>bottom-gap)P.scrollTop+=b.top-(top+Math.min(gap*1.4,av*.25));
+          }
+          function startEdit(){const ta=box.querySelector('textarea');box.classList.add('ed');ta.readOnly=false;ta.focus();ta.setSelectionRange(ta.value.length,ta.value.length);setTimeout(reveal,60);setTimeout(reveal,380)}
+          function showBox(i,s,edit){
+            if(sel&&sel!==s)deselect();
+            Object.assign(T.tx,{c:s.c,z:s.z,f:s.f,a:s.a||'auto'});if(tool==='tx'&&!$('#pp').hidden)opts();
+            if(!sel){sel=s;selI=i;s.hid=true;rp(i);box=document.createElement('div');box.className='tb';
+              box.innerHTML='<textarea dir="auto" aria-label="النص"></textarea><div class="rl"></div><div class="rr"></div><div class="rs"></div>';
+              cv[i].parentNode.append(box);wireBox()}
+            box.querySelector('textarea').value=s.s;place();
+            if(edit)startEdit();else{const t=box.querySelector('textarea');t.focus({preventScroll:true});t.setSelectionRange(t.value.length,t.value.length)}
+          }
+          function wireBox(){
+            const ta=box.querySelector('textarea'),rs=box.querySelector('.rs');let st=null,rz=null;
+            ta.onbeforeinput=e=>{if(box.classList.contains('ed'))return;snap(selI);box.classList.add('ed')};
+            ta.onkeydown=e=>{if((e.key==='Delete'||e.key==='Backspace')&&!ta.value){e.preventDefault();delBox()}};
+            ta.oninput=()=>{sel.s=ta.value;place();reveal()};
+            box.onpointerdown=e=>{if(e.target===rs||box.classList.contains('ed'))return;e.preventDefault();box.setPointerCapture(e.pointerId);snap(selI);st={px:e.clientX,py:e.clientY,x:sel.x,y:sel.y,m:false}};
+            box.onpointermove=e=>{if(!st)return;const dx=e.clientX-st.px,dy=e.clientY-st.py;if(Math.hypot(dx,dy)>5)st.m=true;
+              if(st.m){gdOn=true;const k=ks();let nx=Math.max(0,Math.min(W-sel.w,st.x+dx/k)),ny=Math.max(0,Math.min(H-sel.h,st.y+dy/k));
+                const sn=(v,size,L)=>{for(const t of [0,L/2,L])for(const o of [0,size/2,size]){const r=t-o;if(Math.abs(v+o-t)<5&&r>=0&&r<=L-size)return[r,1]}return[v,0]};
+                const a=sn(nx,sel.w,W),c=sn(ny,sel.h,H);sel.x=a[0];sel.y=c[0];gdSn=[a[1],c[1]];place()}};
+            box.onpointerup=()=>{if(!st)return;const m=st.m;st=null;gdOn=false;rq();
+              if(m){save();return}undo.pop();const n=performance.now();if(n-lt<450)startEdit();else lt=n};
+            rs.onpointerdown=e=>{e.preventDefault();e.stopPropagation();rs.setPointerCapture(e.pointerId);snap(selI);gdOn=true;gdSn=[0,0];rz={px:e.clientX,w:sel.w,z:sel.z}};
+            rs.onpointermove=e=>{if(!rz)return;const f=Math.max(.2,(rz.w+(e.clientX-rz.px)/ks())/rz.w);
+              sel.z=Math.max(8,Math.min(300,Math.round(rz.z*f)));sel.w=Math.max(40,Math.min(W-sel.x,rz.w*f));T.tx.z=sel.z;place()};
+            rs.onpointerup=()=>{if(rz){rz=null;gdOn=false;rq();save();saveTools();if(!$('#pp').hidden)opts()}};
+            const side=(h,dir)=>{let z=null;
+              h.onpointerdown=e=>{e.preventDefault();e.stopPropagation();h.setPointerCapture(e.pointerId);snap(selI);gdOn=true;gdSn=[0,0];z={px:e.clientX,x:sel.x,w:sel.w}};
+              h.onpointermove=e=>{if(!z)return;const d=(e.clientX-z.px)/ks();
+                if(dir>0)sel.w=Math.max(40,Math.min(W-sel.x,z.w+d));
+                else{const nx=Math.max(0,Math.min(z.x+z.w-40,z.x+d));sel.w=z.w+z.x-nx;sel.x=nx}
+                place()};
+              h.onpointerup=()=>{if(z){z=null;gdOn=false;rq();save()}}};
+            side(box.querySelector('.rl'),-1);side(box.querySelector('.rr'),1);
+          }
+
+          const TPLS=[['blank','فارغ'],['lines','مسطّر'],['grid','مربعات'],['dots','نقاط']];
+          function tplPrev(x,k,w,h){
+            x.fillStyle='#fff';x.fillRect(0,0,w,h);x.strokeStyle=x.fillStyle='#b9c3de';x.lineWidth=1.2;
+            if(k==='lines')for(let y=36;y<h;y+=18){x.beginPath();x.moveTo(0,y);x.lineTo(w,y);x.stroke()}
+            if(k==='grid'){for(let y=0;y<h;y+=16){x.beginPath();x.moveTo(0,y);x.lineTo(w,y);x.stroke()}for(let i=0;i<w;i+=16){x.beginPath();x.moveTo(i,0);x.lineTo(i,h);x.stroke()}}
+            if(k==='dots')for(let y=16;y<h;y+=16)for(let i=16;i<w;i+=16){x.beginPath();x.arc(i,y,1.5,0,7);x.fill()}
+          }
+          function tplRender(){
+            const g=$('#tpls'),v=$('#ntpl').value;g.innerHTML='';
+            TPLS.forEach(([k,l])=>{
+              const b=document.createElement('button');b.type='button';b.className='tp'+(k===v?' sel':'');b.setAttribute('role','radio');b.setAttribute('aria-checked',k===v);
+              const c=document.createElement('canvas');c.width=160;c.height=224;tplPrev(c.getContext('2d'),k,160,224);b.append(c);
+              const t=document.createElement('span');t.textContent=l;b.append(t);
+              if(k===v){const ck=document.createElement('i');ck.className='ck';ck.innerHTML=ic('check');b.append(ck)}
+              b.onclick=()=>{$('#ntpl').value=k;tplRender();nprev()};g.append(b);
+            });
+          }
+          let nscope='one';
+          const fm=v=>(Math.round(v*10)/10).toFixed(1);
+          const getM=()=>{const n=parseFloat($('#nbv').value);return isNaN(n)?2:Math.max(0,Math.min(8,Math.round(n*10)/10))};
+          const setM=v=>{$('#nbv').value=fm(Math.max(0,Math.min(8,v)));bdRender()};
+          function nprev(){
+            const c=$('#nbp'),x=c.getContext('2d'),k=c.width/W,t=$('#nbd').value,m=getM();
+            x.setTransform(1,0,0,1,0,0);x.clearRect(0,0,c.width,c.height);
+            x.setTransform(k,0,0,k,0,0);paper(x,$('#ntpl').value,null,null);
+            if(t!=='none')drawBorder(x,{t,c:$('#nbc').value,m},1.8);
+            x.setTransform(1,0,0,1,0,0);
+            if(t!=='none'){const mp=m*W/21*k;x.strokeStyle=x.fillStyle='#e5484d';x.lineWidth=1.2;x.beginPath();x.moveTo(c.width/2,0);x.lineTo(c.width/2,mp);x.stroke();x.font='bold 12px system-ui';x.textAlign='left';x.fillText(fm(m)+' سم',c.width/2+5,Math.max(12,mp/2+4))}
+          }
+          const scopeUpd=()=>document.querySelectorAll('#nscope [data-s]').forEach(b=>b.classList.toggle('on',b.dataset.s===nscope));
+          document.querySelectorAll('#nscope [data-s]').forEach(b=>b.onclick=()=>{nscope=b.dataset.s;scopeUpd()});
+          [['#nbdn',-.1],['#nbup',.1]].forEach(([s,d])=>{
+            const b=$(s);let t=0,iv=0;const stop=()=>{clearTimeout(t);clearInterval(iv)};
+            const step=()=>setM(Math.round((getM()+d)*10)/10);
+            b.onpointerdown=e=>{e.preventDefault();stop();step();t=setTimeout(()=>{iv=setInterval(step,70)},400)};
+            b.onpointerup=b.onpointerleave=b.onpointercancel=stop;
+            b.onclick=e=>{if(e.detail===0)step()};
+            b.oncontextmenu=e=>e.preventDefault();
+          });
+          $('#nbv').oninput=()=>bdRender();
+          $('#nbv').onchange=()=>setM(getM());
+          function noteDlg(mode){
+            nmode=mode;const pg=mode==='page'?cur.pages[ap]:null,n=mode==='edit'?cur:pg?{tpl:ptpl(pg),bd:pbd(pg)}:null;ncv=mode==='edit'?cur.cv:COVERS[0];ncs=mode==='edit'?(cur.cs||'plain'):'frame';$('#nsub').value=mode==='edit'?(cur.sub||''):'';$('#ncon').checked=mode==='edit'?cur.co!==false:true;
+            $('#nt').value=mode==='edit'?cur.title:'';$('#ntpl').value=n&&n.tpl?n.tpl:'lines';
+            $('#ndt').textContent=mode==='new'?'دفتر جديد':mode==='page'?'خصائص الصفحة '+(ap+1):'إعدادات الدفتر';
+            const bd=n&&n.bd&&n.bd.t&&n.bd.t!=='none'?n.bd:null;
+            $('#nbd').value=bd?bd.t:'none';$('#nbc').value=bd?bd.c:BCOL[0];$('#nbv').value=fm(bd&&bd.m!=null?bd.m:2);
+            nscope='one';scopeUpd();$('#nscope').hidden=mode!=='page';$('#nmeta').hidden=mode==='page';
+            tplRender();bdRender();$('#nd').hidden=false;$('#ndel').hidden=mode!=='edit';$('#npin').hidden=mode!=='edit';
+            const c=$('#cvs');c.innerHTML='';
+            COVERS.forEach(v=>{const d=document.createElement('button');d.className='dot'+(v===ncv?' sel':'');d.style.background=v;d.setAttribute('aria-label','غلاف '+v);
+              d.onclick=()=>{ncv=v;c.querySelectorAll('.dot').forEach(x=>x.classList.toggle('sel',x===d));csRender()};c.append(d)});csRender();
+          }
+          $('#nx').onclick=()=>$('#nd').hidden=true;
+          $('#nok').onclick=()=>{
+            const tpl=$('#ntpl').value,b=bdVal();$('#nd').hidden=true;
+            if(nmode==='page'){
+              if(nscope==='all'){cur.tpl=tpl;if(b)cur.bd=b;else delete cur.bd;cur.pages.forEach(p=>{delete p.tpl;delete p.bd})}
+              else{const p=cur.pages[ap];p.tpl=tpl;p.bd=b||{t:'none'}}
+              cur.u=Date.now();cv.forEach((_,i)=>rp(i));save();toast(nscope==='all'?'تم تطبيق الخصائص على كل الصفحات':'تم تغيير خصائص الصفحة '+(ap+1));return;
+            }
+            const t=$('#nt').value.trim()||'دفتر بلا عنوان';
+            if(nmode==='new'){const n={id:Math.random().toString(36).slice(2,9),title:t,cv:ncv,tpl:tpl,bd:b,sub:$('#nsub').value.trim(),cs:ncs,co:$('#ncon').checked,pages:[{strokes:[]}],u:Date.now()};S.notes.push(n);save(n);openNote(n.id)}
+            else{cur.title=t;cur.cv=ncv;cur.tpl=tpl;cur.sub=$('#nsub').value.trim();cur.cs=ncs;cur.co=$('#ncon').checked;if(b)cur.bd=b;else delete cur.bd;cur.pages.forEach(p=>{delete p.tpl;delete p.bd});$('#ttl').value=t;{const P=$('#pages'),st=P.scrollTop;buildPages();P.scrollTop=st}save()}
+          };
+
+          async function deliver(blob,name){
+            const C=window.Capacitor&&window.Capacitor.Plugins;
+            if(C&&C.Filesystem&&C.Share){
+              const fn='najma-'+Date.now()+'.pdf',CH=3*256*1024,u8=new Uint8Array(await blob.arrayBuffer());
+              let w=null;
+              for(let o=0;o<u8.length;o+=CH){
+                let s='';const e=Math.min(u8.length,o+CH);
+                for(let i=o;i<e;i+=8192)s+=String.fromCharCode.apply(null,u8.subarray(i,Math.min(e,i+8192)));
+                const data=btoa(s);
+                if(!o)w=await C.Filesystem.writeFile({path:fn,data,directory:'CACHE'});
+                else await C.Filesystem.appendFile({path:fn,data,directory:'CACHE'});
               }
-              compileOptions {
-                  sourceCompatibility = JavaVersion.VERSION_17
-                  targetCompatibility = JavaVersion.VERSION_17
+              await C.Share.share({title:name,files:[w.uri],dialogTitle:'حفظ أو مشاركة الملف'});return;
+            }
+            const dl=window.claude&&await window.claude.use('downloads').catch(()=>null);
+            if(dl){await dl.save({filename:name,data:blob});return}
+            const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();
+          }
+          let exporting=false;
+          async function exportPdf(){
+            if(exporting)return;exporting=true;toast('جارٍ تجهيز PDF...');
+            try{await exportPdf0()}catch(e){toast('تعذّر التصدير: '+String(e&&(e.message||e)).slice(0,80))}
+            exporting=false;
+          }
+          async function exportPdf0(){
+            deselect();const jp=[];if(cur.co!==false){const c=document.createElement('canvas');c.width=W*2;c.height=H*2;const x=c.getContext('2d');x.setTransform(2,0,0,2,0,0);drawCover(x,cur);jp.push(new Uint8Array(b64buf(c.toDataURL('image/jpeg',.9).split(',')[1])));c.width=c.height=1}
+            for(let k=0;k<cur.pages.length;k++){toast('جارٍ تجهيز الصفحة '+(k+1)+' من '+cur.pages.length);await new Promise(r=>setTimeout(r,30));const was=cv[k]._on;act(k,true);await ensureBg(cur.pages[k]);rp(k);jp.push(new Uint8Array(b64buf(cv[k].toDataURL('image/jpeg',.88).split(',')[1])));if(!was)act(k,false)}
+            const enc=new TextEncoder(),parts=[],off=[];let len=0;
+            const add=d=>{const b=typeof d==='string'?enc.encode(d):d;parts.push(b);len+=b.length};
+            const N=jp.length,tot=2+3*N;
+            add('%PDF-1.4\n');off[1]=len;add('1 0 obj\n<</Type/Catalog/Pages 2 0 R>>\nendobj\n');
+            off[2]=len;add('2 0 obj\n<</Type/Pages/Count '+N+'/Kids['+jp.map((_,k)=>(3+3*k)+' 0 R').join(' ')+']>>\nendobj\n');
+            jp.forEach((_,k)=>{
+              const j=jp[k],c='q 595.28 0 0 841.89 0 0 cm /Im0 Do Q';
+              off[3+3*k]=len;add((3+3*k)+' 0 obj\n<</Type/Page/Parent 2 0 R/MediaBox[0 0 595.28 841.89]/Contents '+(4+3*k)+' 0 R/Resources<</XObject<</Im0 '+(5+3*k)+' 0 R>>>>>>\nendobj\n');
+              off[4+3*k]=len;add((4+3*k)+' 0 obj\n<</Length '+c.length+'>>\nstream\n'+c+'\nendstream\nendobj\n');
+              off[5+3*k]=len;add((5+3*k)+' 0 obj\n<</Type/XObject/Subtype/Image/Width '+W*2+'/Height '+H*2+'/ColorSpace/DeviceRGB/BitsPerComponent 8/Filter/DCTDecode/Length '+j.length+'>>\nstream\n');add(j);add('\nendstream\nendobj\n');
+            });
+            const xr=len;let x='xref\n0 '+(tot+1)+'\n0000000000 65535 f \n';
+            for(let i=1;i<=tot;i++)x+=String(off[i]).padStart(10,'0')+' 00000 n \n';
+            add(x+'trailer\n<</Size '+(tot+1)+'/Root 1 0 R>>\nstartxref\n'+xr+'\n%%EOF');
+            try{await deliver(new Blob(parts,{type:'application/pdf'}),(cur.title.replace(/[\\/:*?"<>|]/g,'')||'notebook')+'.pdf');toast('تم تجهيز ملف PDF')}
+            catch(e){if(!/cancel|declin/i.test(String(e&&(e.message||e.code))))toast('تعذّر تصدير PDF: '+String(e&&(e.message||e.code||e)).slice(0,80))}
+          }
+
+          function posProps(b){
+            const p=$('#pp'),e=$('#ed').getBoundingClientRect(),r=b.getBoundingClientRect();
+            const max=e.height-p.offsetHeight-8;
+            p.style.top=Math.max(48,Math.min(r.top-e.top-6,max))+'px';
+          }
+          function showProps(b){
+            const t=b.dataset.t;if(t==='hand'||t==='oc')return;
+            if(t!==tool)setTool(t);
+            $('#pp').hidden=false;opts();posProps(b);
+          }
+          document.querySelectorAll('[data-t]').forEach(b=>{
+            let tm=0,lp=false,taps=0,tt=0;
+            b.onpointerdown=()=>{lp=false;clearTimeout(tm);tm=setTimeout(()=>{lp=true;showProps(b)},450)};
+            const end=()=>clearTimeout(tm);
+            b.onpointerup=end;b.onpointerleave=end;b.onpointercancel=end;
+            b.oncontextmenu=e=>e.preventDefault();
+            b.onclick=()=>{
+              if(lp){lp=false;return}
+              $('#pp').hidden=true;setTool(b.dataset.t);
+              taps=Date.now()-tt<700?taps+1:1;tt=Date.now();
+              if(taps>=3){taps=0;showProps(b)}
+            };
+          });
+          $('#cc').onclick=()=>{if(tool==='hand'||tool==='er'||tool==='oc')setTool('pen');const p=$('#pp');p.hidden=!p.hidden;if(!p.hidden){opts();posProps($('#cc'))}};
+          const actv=()=>document.querySelectorAll('.th[data-p]').forEach(t=>t.classList.toggle('on',+t.dataset.p===ap));
+          function strip(){
+            pnUpd();
+            if(cur&&$('#st').hidden){$('#un').disabled=!undo.length;$('#re').disabled=!redo.length;rq();return}
+            if(!cur)return;const s=$('#st');s.innerHTML='';
+            const cl=document.createElement('button');cl.className='ib';cl.style.cssText='border:1px dashed var(--ln);height:76px';cl.innerHTML=ic('broom');cl.setAttribute('aria-label','مسح الصفحة');cl.title='مسح الصفحة';
+            cl.onclick=()=>{deselect();snap(ap);cur.pages[ap].strokes=[];rp(ap);save()};s.append(cl);
+            cur.pages.forEach((pg,i)=>{
+              const t=document.createElement('button');t.className='th';t.dataset.p=i;t.setAttribute('aria-label','صفحة '+(i+1));
+              t.innerHTML='<canvas width="108" height="152"></canvas><i>'+(i+1)+'</i>';
+              const x=t.querySelector('canvas').getContext('2d');x.setTransform(108/W,0,0,108/W,0,0);paper(x,ptpl(pg),pg.bg?thFor(pg.bg):null,pbd(pg));pg.strokes.forEach(q=>stroke(x,q));
+              t.onclick=()=>goTo(i);s.append(t);
+            });
+            const a=document.createElement('button');a.className='th add';a.innerHTML=ic('plus');a.setAttribute('aria-label','صفحة جديدة');a.onclick=addPage;s.append(a);
+            $('#un').disabled=!undo.length;$('#re').disabled=!redo.length;actv();rq();
+          }
+          function addPage(){deselect();cur.pages.push({strokes:[]});buildPages();ap=cur.pages.length-1;save();pnUpd();const p=$('#pages');setTimeout(()=>p.scrollTo({top:p.scrollHeight,behavior:'smooth'}),50)}
+          function pnUpd(){if(!cur)return;ap=Math.max(0,Math.min(ap,cur.pages.length-1));$('#pnt').textContent=(ap+1)+' / '+cur.pages.length}
+          function curPage(){const P=$('#pages'),pr=P.getBoundingClientRect(),mid=pr.top+pr.height/2;let best=ap,bd=1e9;cv.forEach((c,i)=>{const r=c.getBoundingClientRect(),d=r.top<=mid&&r.bottom>=mid?0:Math.min(Math.abs(r.top-mid),Math.abs(r.bottom-mid));if(d<bd){bd=d;best=i}});return best}
+          function goTo(i,now){
+            if(!cur||!cv.length)return;i=Math.max(0,Math.min(i,cur.pages.length-1));ap=i;pnUpd();actv();
+            const P=$('#pages'),w=cv[i].parentNode;
+            P.scrollTo({top:P.scrollTop+w.getBoundingClientRect().top-P.getBoundingClientRect().top-14,behavior:now?'auto':'smooth'});
+          }
+          $('#pnp').onclick=()=>goTo(ap-1);$('#pnn').onclick=()=>goTo(ap+1);
+          $('#pns').onclick=()=>{deselect();noteDlg('page')};
+          $('#pnt').onclick=()=>{deselect();$('#gpi').value=ap+1;$('#gpi').max=cur.pages.length;$('#gp').hidden=false;setTimeout(()=>{$('#gpi').focus();$('#gpi').select()},50)};
+          const gpGo=()=>{const v=parseInt($('#gpi').value,10);if(!v||v<1||v>cur.pages.length){toast('أدخل رقمًا بين 1 و '+cur.pages.length);return}$('#gp').hidden=true;goTo(v-1)};
+          $('#gpok').onclick=gpGo;$('#gpx').onclick=()=>$('#gp').hidden=true;
+          $('#gpi').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();gpGo()}};
+          $('#pnd').onclick=()=>{
+            const d=$('#pnd');
+            if(!d.classList.contains('warn')||d._p!==ap){d.classList.add('warn');d._p=ap;toast('اضغط مرة أخرى لحذف الصفحة '+(ap+1));clearTimeout(d._t);d._t=setTimeout(()=>d.classList.remove('warn'),3000);return}
+            clearTimeout(d._t);d.classList.remove('warn');deselect();
+            if(cur.pages.length===1){const pg=cur.pages[0],b=pg.bg;pg.strokes=[];delete pg.bg;if(b)gcBg(b);undo=[];redo=[];redraw();save();toast('الدفتر يحتاج صفحة واحدة على الأقل: تم مسح الصفحة');return}
+            const pg=cur.pages.splice(ap,1)[0];if(pg.bg)gcBg(pg.bg);
+            undo=[];redo=[];ap=Math.min(ap,cur.pages.length-1);buildPages();save();pnUpd();
+            setTimeout(()=>goTo(ap,true),60);toast('تم حذف الصفحة');
+          };
+          function fitZoom(){Z=Math.max(.3,Math.min(1.2,($('#pages').clientWidth-28)/794))}
+          const rq=()=>{cancelAnimationFrame(rq.r);rq.r=requestAnimationFrame(rulers)};
+          function rulers(){
+            const P=$('#pages'),h=$('#rh'),v=$('#rv');if(!cur||$('#ed').hidden)return;
+            const D=2,pw=P.clientWidth,ph=P.clientHeight,pr=P.getBoundingClientRect(),k=794*Z/21;
+            h.width=pw*D;h.height=20*D;v.width=20*D;v.height=ph*D;
+            const f=cv[0]?cv[0].getBoundingClientRect():pr,ox=f.left-pr.left,oy=f.top-pr.top;
+            const draw=(c,size,o,hz)=>{const x=c.getContext('2d');x.scale(D,D);x.fillStyle='#f1eee9';x.fillRect(0,0,c.width,c.height);
+              x.fillStyle='#e0dcd5';
+              if(hz)x.fillRect(o,0,210*k/10,20);else cv.forEach(q=>{const b=q.getBoundingClientRect();x.fillRect(0,b.top-pr.top,20,b.height)});
+              x.strokeStyle=x.fillStyle='#8b8f9c';x.font='9px system-ui';x.lineWidth=1;x.textAlign='center';
+              const u=k/10,st=u>=3?1:10,a=Math.max(0,Math.ceil(-o/u/st)*st),z=Math.floor((size-o)/u/st)*st;
+              for(let m=a;m<=z;m+=st){const p=o+m*u,L=m%10===0?12:m%5===0?8:5;x.beginPath();
+                if(hz){x.moveTo(p,20);x.lineTo(p,20-L)}else{x.moveTo(20,p);x.lineTo(20-L,p)}x.stroke();
+                if(m%10===0&&(k>=18||m%20===0)){if(hz)x.fillText(m/10,p+8,9);else x.fillText(m/10,6,p+10)}}};
+            draw(h,pw,ox,true);draw(v,ph,oy,false);
+            const g=$('#gd');g.width=pw*D;g.height=ph*D;
+            if(gdOn&&sel&&box){
+              const b=box.getBoundingClientRect(),L=b.left-pr.left,R=b.right-pr.left,Tp=b.top-pr.top,B=b.bottom-pr.top;
+              const gx=g.getContext('2d'),hx=h.getContext('2d'),vx=v.getContext('2d'),A='#4dabf7',M='#f06595';
+              gx.scale(D,D);gx.setLineDash([5,4]);gx.lineWidth=1.2;
+              const ln=(x1,y1,x2,y2,c)=>{gx.strokeStyle=c;gx.beginPath();gx.moveTo(x1,y1);gx.lineTo(x2,y2);gx.stroke()};
+              const sx=gdSn[0]?M:A,sy=gdSn[1]?M:A;
+              ln(L,0,L,ph,sx);ln(R,0,R,ph,sx);ln(0,Tp,pw,Tp,sy);ln(0,B,pw,B,sy);
+              hx.fillStyle='#4dabf766';hx.fillRect(L,0,R-L,20);vx.fillStyle='#4dabf766';vx.fillRect(0,Tp,20,B-Tp);
+              hx.strokeStyle=vx.strokeStyle=A;hx.beginPath();hx.moveTo(L,0);hx.lineTo(L,20);hx.moveTo(R,0);hx.lineTo(R,20);hx.stroke();
+              vx.beginPath();vx.moveTo(0,Tp);vx.lineTo(20,Tp);vx.moveTo(0,B);vx.lineTo(20,B);vx.stroke();
+              hx.fillStyle=vx.fillStyle='#1f2430';hx.font=vx.font='bold 9px system-ui';
+              hx.textAlign='right';hx.fillText(((L-ox)/k).toFixed(1),L-3,9);hx.textAlign='left';hx.fillText(((R-ox)/k).toFixed(1),R+3,9);
+              vx.textAlign='center';vx.fillText(((Tp-oy)/k).toFixed(1),10,Tp-3);vx.fillText(((B-oy)/k).toFixed(1),10,B+10);
+            }
+          }
+          function applyZoom(){document.querySelectorAll('.pw').forEach(w=>w.style.width=794*Z+'px');$('#zl').textContent=Math.round(Z*100)+'%';if(sel)place();rq()}
+          $('#zi').onclick=()=>{Z=Math.min(3,Z+.1);applyZoom()};$('#zo').onclick=()=>{Z=Math.max(.3,Z-.1);applyZoom()};
+
+          $('#un').onclick=()=>{deselect();swap(undo,redo)};$('#re').onclick=()=>{deselect();swap(redo,undo)};
+          $('#ttl').oninput=e=>{cur.title=e.target.value||'دفتر بلا عنوان';save()};
+          $('#back').onclick=()=>{deselect();save();home()};
+          $('#sq').oninput=()=>home();
+          $('#addp').onclick=addPage;
+          $('#cov').onclick=()=>noteDlg('edit');$('#fab').onclick=()=>noteDlg('new');$('#exp').onclick=exportPdf;
+          $('#ndel').onclick=()=>{
+            const d=$('#ndel');
+            if(!d.classList.contains('warn')){d.classList.add('warn');toast('اضغط مرة أخرى لتأكيد حذف الدفتر');setTimeout(()=>d.classList.remove('warn'),3000);return}
+            const n=cur;cur=null;S.notes=S.notes.filter(x=>x!==n);dirty.delete(n);gone.push(n.id);save();n.pages.forEach(p=>p.bg&&gcBg(p.bg));$('#nd').hidden=true;home();
+
+          };
+          const uid=()=>Math.random().toString(36).slice(2,9);
+          let _db=null;
+          const idb=()=>_db||(_db=new Promise((ok,no)=>{try{const r=indexedDB.open('najma-bg',2);r.onupgradeneeded=()=>{const d=r.result;['bg','kv'].forEach(n=>{if(!d.objectStoreNames.contains(n))d.createObjectStore(n)})};r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)}catch(e){no(e)}}));
+          const idbPut=async(k,v)=>{const d=await idb();return new Promise((ok,no)=>{const t=d.transaction('bg','readwrite');t.objectStore('bg').put(v,k);t.oncomplete=ok;t.onerror=()=>no(t.error)})};
+          const idbGet=async k=>{try{const d=await idb();return await new Promise(ok=>{const q=d.transaction('bg').objectStore('bg').get(k);q.onsuccess=()=>ok(q.result);q.onerror=()=>ok(null)})}catch(e){return null}};
+          const gcBg=async id=>{if(S.notes.some(n=>n.pages.some(p=>p.bg===id)))return;try{const d=await idb(),o=d.transaction('bg','readwrite').objectStore('bg');o.delete(id);o.delete(id+':t')}catch(e){}};
+          const BG=new Map(),TH=new Map();
+          function thFor(id){
+            let e=TH.get(id);if(!e){e=new Image();TH.set(id,e);e.onload=()=>{clearTimeout(thFor.t);thFor.t=setTimeout(strip,120)};idbGet(id+':t').then(d=>{if(d)e.src=d})}
+            return e.complete&&e.naturalWidth?e:null;
+          }
+          function thumbData(src,w,h){
+            const c=document.createElement('canvas');c.width=108;c.height=152;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,108,152);
+            const sw=src.naturalWidth||src.width,sh=src.naturalHeight||src.height,k=Math.min(108/sw,152/sh);
+            x.drawImage(src,(108-sw*k)/2,(152-sh*k)/2,sw*k,sh*k);return c.toDataURL('image/jpeg',.6);
+          }
+          function bgFor(pg){
+            if(!pg.bg)return null;const e=BG.get(pg.bg);
+            if(e)return e.complete&&e.naturalWidth?e:null;
+            const im=new Image();BG.set(pg.bg,im);im.onload=redraw;idbGet(pg.bg).then(d=>{if(d)im.src=d});return null;
+          }
+          function redraw(){cancelAnimationFrame(redraw.r);redraw.r=requestAnimationFrame(()=>{if(!cur)return;cv.forEach((_,i)=>rp(i));strip()})}
+          function ensureBg(pg){return new Promise(res=>{
+            if(!pg.bg)return res();const ok=()=>{const e=BG.get(pg.bg);return e&&e.complete&&e.naturalWidth};
+            bgFor(pg);if(ok())return res();const t=setInterval(()=>{if(ok()){clearInterval(t);res()}},50);setTimeout(()=>{clearInterval(t);res()},6000)})}
+          async function svgFix(f){
+            const d=new DOMParser().parseFromString(await f.text(),'image/svg+xml'),r=d.documentElement;
+            if(!r||r.nodeName.toLowerCase()!=='svg'||d.querySelector('parsererror'))throw new Error('svg');
+            const vb=(r.getAttribute('viewBox')||'').trim().split(/[\s,]+/).map(Number),aw=r.getAttribute('width')||'',ah=r.getAttribute('height')||'';
+            let w=parseFloat(aw),h=parseFloat(ah);
+            if(!(w>0)||!(h>0)||/%/.test(aw+ah)){if(vb.length===4&&vb[2]>0&&vb[3]>0){w=vb[2];h=vb[3]}else{w=800;h=1131}}
+            r.setAttribute('width',w);r.setAttribute('height',h);r.setAttribute('xmlns','http://www.w3.org/2000/svg');
+            if(!r.getAttribute('viewBox'))r.setAttribute('viewBox','0 0 '+w+' '+h);
+            return new Blob([new XMLSerializer().serializeToString(r)],{type:'image/svg+xml'});
+          }
+          async function imgToBg(f){
+            const sv=/svg/i.test(f.type)||/\.svg$/i.test(f.name);
+            const url=URL.createObjectURL(sv?await svgFix(f):f);
+            try{
+              const im=await new Promise((ok,no)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=()=>no(new Error('img'));i.src=url});
+              const nw=im.naturalWidth||800,nh=im.naturalHeight||1131,k=Math.min(sv?4:1,1600/nw,2262/nh),c=document.createElement('canvas');
+              c.width=Math.max(1,Math.round(nw*k));c.height=Math.max(1,Math.round(nh*k));
+              const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(im,0,0,c.width,c.height);
+              const id=uid();await idbPut(id,c.toDataURL('image/jpeg',.88));await idbPut(id+':t',thumbData(c));return id;
+            }finally{URL.revokeObjectURL(url)}
+          }
+          const loadScript=src=>new Promise((ok,no)=>{const e=document.createElement('script');e.src=src;e.onload=ok;e.onerror=no;document.head.append(e)});
+          async function getPdfjs(){
+            if(window.pdfjsLib)return window.pdfjsLib;
+            for(const base of ['pdfjs/','https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/']){
+              try{await loadScript(base+'pdf.min.js');if(!window.pdfjsLib)continue;window.pdfjsLib.GlobalWorkerOptions.workerSrc=base+'pdf.worker.min.js';return window.pdfjsLib}catch(e){}
+            }
+            throw new Error('pdfjs');
+          }
+          async function pdfToIds(f){
+            const lib=await getPdfjs(),doc=await lib.getDocument({data:await f.arrayBuffer()}).promise,ids=[],N=Math.min(doc.numPages,300);
+            for(let n=1;n<=N;n++){
+              toast('جارٍ استيراد الصفحة '+n+' من '+N);
+              const pg=await doc.getPage(n),v0=pg.getViewport({scale:1}),sc=Math.min(1600/v0.width,2262/v0.height),v=pg.getViewport({scale:sc});
+              const c=document.createElement('canvas');c.width=Math.round(v.width);c.height=Math.round(v.height);
+              const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);
+              await pg.render({canvasContext:x,viewport:v,canvas:c}).promise;
+              const id=uid();await idbPut(id,c.toDataURL('image/jpeg',.85));await idbPut(id+':t',thumbData(c));ids.push(id);c.width=c.height=1;
+            }
+            return ids;
+          }
+          let imMode='';
+          $('#pgs').onclick=()=>{const st=$('#st');st.hidden=!st.hidden;if(!st.hidden)strip();$('#ed').classList.toggle('sp',!st.hidden);$('#pgs').classList.toggle('on',!st.hidden);rq()};
+          $('#imp').onclick=()=>{deselect();$('#im').hidden=false};
+          $('#imx').onclick=()=>$('#im').hidden=true;
+          $('#fab2').onclick=()=>{imMode='newpdf';$('#fpdf').click()};
+          document.querySelectorAll('#im [data-m]').forEach(b=>b.onclick=()=>{
+            const m=b.dataset.m;
+            if(m==='rm1'||m==='rma'){const ps=m==='rm1'?[cur.pages[ap]]:cur.pages,old=new Set(ps.map(p=>p.bg).filter(Boolean));
+              ps.forEach(p=>delete p.bg);old.forEach(gcBg);save();redraw();$('#im').hidden=true;toast('تمت إزالة الخلفية');return}
+            imMode=m;$(m==='pdf'?'#fpdf':'#fimg').click();
+          });
+          $('#fimg').onchange=async e=>{
+            const f=e.target.files[0];e.target.value='';if(!f)return;$('#im').hidden=true;
+            try{const id=await imgToBg(f),ps=imMode==='all'?cur.pages:[cur.pages[ap]],old=new Set(ps.map(p=>p.bg).filter(Boolean));
+              ps.forEach(p=>p.bg=id);old.forEach(gcBg);save();redraw();toast(imMode==='all'?'تم تعيين الخلفية لكل الصفحات':'تم تعيين خلفية الصفحة')}
+            catch(er){toast('تعذّر قراءة الصورة. المدعوم: PNG وJPG وWEBP وGIF وBMP وSVG')}
+          };
+          $('#fpdf').onchange=async e=>{
+            const fs=[...e.target.files];e.target.value='';if(!fs.length)return;$('#im').hidden=true;
+            const ids=[],bad=[];
+            for(const f of fs){
+              try{
+                if(/pdf/i.test(f.type)||/\.pdf$/i.test(f.name))ids.push(...await pdfToIds(f));
+                else{toast('جارٍ استيراد '+f.name.slice(0,30));ids.push(await imgToBg(f))}
+              }catch(er){bad.push((f.name.split('.').pop()||'?').toUpperCase())}
+            }
+            if(!ids.length){toast('تعذّر الاستيراد. المدعوم: PDF وPNG وJPG وWEBP وGIF وBMP وSVG');return}
+            if(imMode==='newpdf'){
+              const n={id:uid(),title:fs[0].name.replace(/\.[^.]+$/,'').slice(0,40)||'دفتر',cv:COVERS[Math.floor(Math.random()*COVERS.length)],tpl:'blank',co:false,pages:ids.map(id=>({strokes:[],bg:id})),u:Date.now()};
+              S.notes.push(n);save(n);openNote(n.id);
+            }else{
+              if(cur.pages.length===1&&!cur.pages[0].strokes.length&&!cur.pages[0].bg)cur.pages=[];
+              const first=cur.pages.length;ids.forEach(id=>cur.pages.push({strokes:[],bg:id}));
+              buildPages();ap=first;save();redraw();
+            }
+            toast('تم استيراد '+ids.length+' صفحة'+(bad.length?' - غير مدعوم: '+bad.join('، '):''));
+          };
+          /* ===== الغلاف ===== */
+          function starPath(x,cx,cy,R,r){x.beginPath();for(let i=0;i<10;i++){const a=-Math.PI/2+i*Math.PI/5,q=i%2?r:R;x[i?'lineTo':'moveTo'](cx+q*Math.cos(a),cy+q*Math.sin(a))}x.closePath()}
+          function drawCover(x,n){
+            const st=n.cs||'plain',cx=(W-90)/2;
+            x.save();x.setLineDash([]);x.globalAlpha=1;x.globalCompositeOperation='source-over';
+            x.fillStyle=n.cv||'#34509c';x.fillRect(0,0,W,H);
+            let g=x.createLinearGradient(0,0,W,H);g.addColorStop(0,'rgba(255,255,255,.28)');g.addColorStop(.45,'rgba(255,255,255,0)');g.addColorStop(1,'rgba(0,0,0,.34)');x.fillStyle=g;x.fillRect(0,0,W,H);
+            g=x.createLinearGradient(W-90,0,W,0);g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(.55,'rgba(0,0,0,.3)');g.addColorStop(1,'rgba(255,255,255,.14)');x.fillStyle=g;x.fillRect(W-90,0,90,H);
+            x.fillStyle=x.strokeStyle='#fff';x.textBaseline='middle';x.textAlign='center';
+            if(st==='frame'){x.lineWidth=5;x.strokeRect(50,50,W-190,H-100);x.lineWidth=2;x.strokeRect(72,72,W-234,H-144)}
+            if(st==='geo'){x.globalAlpha=.14;x.beginPath();x.arc(110,150,270,0,7);x.fill();x.beginPath();x.arc(W-120,H-110,330,0,7);x.fill();x.globalAlpha=.1;x.beginPath();x.moveTo(0,H*.56);x.lineTo(W,H*.36);x.lineTo(W,H*.5);x.lineTo(0,H*.72);x.fill();x.globalAlpha=1}
+            x.globalAlpha=.2;x.beginPath();x.arc(cx,st==='geo'?250:290,112,0,7);x.fill();x.globalAlpha=1;starPath(x,cx,st==='geo'?250:290,64,27);x.fill();
+            const title=(n.title||'').trim()||'دفتر بلا عنوان',sub=(n.sub||'').trim();
+            x.font='bold 76px "Amiri","Noto Naskh Arabic","Noto Sans Arabic",serif';
+            x.direction=/[\u0600-\u06FF]/.test(title)?'rtl':'ltr';
+            const ls=wrap(x,title,560).slice(0,4),y0=(st==='geo'?640:560)-(ls.length-1)*48;
+            ls.forEach((l,i)=>x.fillText(l,cx,y0+i*98));
+            let y=y0+ls.length*98+10;
+            if(sub){x.globalAlpha=.85;x.lineWidth=3;x.beginPath();x.moveTo(cx-70,y);x.lineTo(cx+70,y);x.stroke();x.globalAlpha=.92;x.font='40px "Amiri","Noto Naskh Arabic","Noto Sans Arabic",serif';x.direction=/[\u0600-\u06FF]/.test(sub)?'rtl':'ltr';wrap(x,sub,540).slice(0,3).forEach((l,i)=>x.fillText(l,cx,y+52+i*54))}
+            x.globalAlpha=.65;x.font='28px "Noto Sans Arabic",system-ui,sans-serif';x.direction='rtl';x.fillText('نجمة',cx,H-100);
+            x.restore();
+          }
+          let ncs='frame';
+          const CST=[['plain','بسيط'],['frame','إطار'],['geo','هندسي']];
+          function csRender(){
+            const g=$('#cst');if(!g)return;g.innerHTML='';
+            CST.forEach(([k,l])=>{
+              const b=document.createElement('button');b.type='button';b.className='tp'+(k===ncs?' sel':'');b.setAttribute('role','radio');b.setAttribute('aria-checked',k===ncs);
+              const c=document.createElement('canvas');c.width=160;c.height=226;const x=c.getContext('2d');x.setTransform(160/W,0,0,160/W,0,0);
+              drawCover(x,{cv:ncv,title:$('#nt').value,sub:$('#nsub').value,cs:k});
+              b.append(c);const t=document.createElement('span');t.textContent=l;b.append(t);
+              if(k===ncs){const ck=document.createElement('i');ck.className='ck';ck.innerHTML=ic('check');b.append(ck)}
+              b.onclick=()=>{ncs=k;csRender()};g.append(b);
+            });
+          }
+          $('#nt').oninput=csRender;$('#nsub').oninput=csRender;
+
+          /* ===== تحويل خط اليد إلى نص ===== */
+          const INK=()=>window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.Ink;
+          const sbb=s=>{let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;s.p.forEach(q=>{x0=Math.min(x0,q[0]);x1=Math.max(x1,q[0]);y0=Math.min(y0,q[1]);y1=Math.max(y1,q[1])});return{x0,y0,x1,y1}};
+          function ocrLines(ss){
+            const bs=ss.map((s,k)=>Object.assign({s,k},sbb(s))),hs=bs.map(b=>b.y1-b.y0).sort((a,b)=>a-b),hr=Math.max(14,hs[Math.floor(hs.length*.75)]||14);
+            bs.sort((a,b)=>a.y0-b.y0);const L=[];
+            bs.forEach(b=>{const l=L[L.length-1];if(l&&b.y0<=l.y1-hr*.25){l.a.push(b);l.y1=Math.max(l.y1,b.y1)}else L.push({a:[b],y1:b.y1})});
+            return L.map(l=>l.a.sort((p,q)=>p.k-q.k));
+          }
+          function ocrPayload(ss){
+            return ocrLines(ss).map(a=>{let t=0,x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
+              const strokes=a.map(b=>{x0=Math.min(x0,b.x0);x1=Math.max(x1,b.x1);y0=Math.min(y0,b.y0);y1=Math.max(y1,b.y1);t+=300;return b.s.p.map(q=>[q[0],q[1],t+=12])});
+              return{strokes,w:x1-x0+20,h:y1-y0+20}});
+          }
+          function ocrStart(i,r){
+            const pg=cur.pages[i];let ss=pg.strokes.filter(s=>s.t==='pen'&&s.p&&s.p.length);
+            if(r)ss=ss.filter(s=>{const b=sbb(s),cx=(b.x0+b.x1)/2,cy=(b.y0+b.y1)/2;return cx>=r.x0&&cx<=r.x1&&cy>=r.y0&&cy<=r.y1});
+            if(!ss.length){toast('لا يوجد خط يد بالقلم داخل التحديد');return}
+            let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;ss.forEach(s=>{const b=sbb(s);x0=Math.min(x0,b.x0);x1=Math.max(x1,b.x1);y0=Math.min(y0,b.y0);y1=Math.max(y1,b.y1)});
+            oc={i,ss,b:{x0,y0,x1,y1},tk:0};$('#oct').value='';$('#oca').innerHTML='';$('#oc').hidden=false;ocrRun();
+          }
+          async function ocrRun(){
+            if(!oc)return;const tk=oc.tk=(oc.tk||0)+1,st=$('#ocs'),ta=$('#oct'),P=INK();$('#oca').innerHTML='';
+            if(!P){st.textContent='التعرف الآلي متاح في تطبيق الأندرويد فقط. في هذه التجربة اكتب النص يدويًا لتجرّب التحويل.';return}
+            try{
+              st.textContent='جارٍ تجهيز نموذج الخط... أول مرة فقط يحتاج إنترنت لتنزيله ثم يعمل بدون إنترنت';
+              await P.ensureModel({lang:olang});if(!oc||oc.tk!==tk)return;
+              st.textContent='جارٍ التعرف على الخط...';
+              const r=await P.recognize({lang:olang,lines:ocrPayload(oc.ss)});if(!oc||oc.tk!==tk)return;
+              const ls=r.lines||[];ta.value=ls.map(l=>l.text||'').join('\n');
+              st.textContent=ta.value.trim()?'راجع النص وصحّح أي كلمة قبل التحويل':'لم يُتعرَّف على نص. اكتب بخط أوضح أو غيّر اللغة.';
+              if(ls.length===1&&ls[0].alts&&ls[0].alts.length>1)ls[0].alts.forEach(a=>{const b=document.createElement('button');b.type='button';b.textContent=a;b.onclick=()=>{ta.value=a};$('#oca').append(b)});
+            }catch(e){const m=String(e&&(e.message||e));st.textContent='تعذّر التعرف: '+m.slice(0,100)+(/download|check/i.test(m)?' — اتصل بالإنترنت لتنزيل النموذج مرة واحدة':'')}
+          }
+          document.querySelectorAll('#ocl [data-l]').forEach(b=>b.onclick=()=>{olang=b.dataset.l;document.querySelectorAll('#ocl [data-l]').forEach(x=>x.classList.toggle('on',x===b));ocrRun()});
+          $('#ocx').onclick=()=>{$('#oc').hidden=true;if(oc)oc.tk=-1;oc=null};
+          $('#ocok').onclick=()=>{
+            const txt=$('#oct').value.trim();if(!txt){toast('لا يوجد نص للتحويل');return}
+            const o=oc,pg=cur.pages[o.i];$('#oc').hidden=true;oc=null;snap(o.i);
+            if($('#ocd').checked)pg.strokes=pg.strokes.filter(s=>!o.ss.includes(s));
+            const z=T.tx,w=Math.min(W,Math.max(200,o.b.x1-o.b.x0+40)),x=Math.max(0,Math.min(W-w,o.b.x0-20));
+            const m=document.createElement('canvas').getContext('2d');m.font=z.z+'px "'+z.f+'",sans-serif';
+            const n={t:'tx',s:txt,x,y:Math.max(0,Math.min(H-z.z*1.5,o.b.y0-4)),w,h:0,c:z.c,z:z.z,f:z.f,a:z.a};
+            n.h=Math.max(z.z*1.3,wrap(m,txt,w).length*z.z*1.3);
+            pg.strokes.push(n);cur.u=Date.now();setTool('tx');rp(o.i);save();showBox(o.i,n,false);toast('تم التحويل إلى مربع نص قابل للتعديل');
+          };
+
+          /* ===== أدوات الدراسة (بدون إنترنت) ===== */
+          function STD(){return{pom:{f:25,b:5,log:{}},cards:[],tasks:[],tt:[]}}
+          const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+          const dk=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+          const dnum=()=>Math.floor((Date.now()-new Date().getTimezoneOffset()*6e4)/864e5);
+          const TOOLS=[['pom','timer','مؤقت التركيز'],['fc','cards','بطاقات المراجعة'],['tk','cal','الواجبات والاختبارات'],['tt','table','الجدول الأسبوعي']];
+          function renderTools(){const g=$('#tools');if(!g||g.dataset.r)return;g.dataset.r=1;TOOLS.forEach(([k,i,l])=>{const b=document.createElement('button');b.className='tile';b.innerHTML=ic(i)+'<span>'+l+'</span>';b.onclick=()=>svOpen(k,l);g.append(b)})}
+          let sv='';
+          const svb=()=>$('#svb'),q$=s=>svb().querySelector(s);
+          function svOpen(k,t){sv=k;$('#svt').textContent=t;$('#sv').hidden=false;({pom:svPom,fc:svCards,tk:svTasks,tt:svTt})[k]()}
+          $('#svx').onclick=()=>{$('#sv').hidden=true;sv=''};
+          const clampN=(v,a,b,d)=>{v=Math.round(+v);return isNaN(v)?d:Math.max(a,Math.min(b,v))};
+
+          /* 1) مؤقت التركيز */
+          const pm={mode:'f',left:0,run:false,end:0,iv:0};
+          const pmFmt=s=>String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
+          function beep(){try{const a=new (window.AudioContext||window.webkitAudioContext)(),o=a.createOscillator(),g=a.createGain();o.connect(g);g.connect(a.destination);o.frequency.value=880;g.gain.value=.2;o.start();setTimeout(()=>{o.stop();a.close()},700)}catch(e){}try{navigator.vibrate&&navigator.vibrate([300,150,300])}catch(e){}}
+          function pmDraw(){const e=$('#pmt');if(!e||sv!=='pom')return;const p=S.st.pom,tot=(pm.mode==='f'?p.f:p.b)*60;e.textContent=pmFmt(pm.left);$('#pmb').style.width=(100-pm.left/tot*100)+'%'}
+          function pmTick(){
+            if(!pm.run)return;pm.left=Math.max(0,Math.round((pm.end-Date.now())/1000));
+            if(pm.left<=0){pm.run=false;clearInterval(pm.iv);const p=S.st.pom;
+              if(pm.mode==='f'){const k=dk(new Date());p.log[k]=(p.log[k]||0)+p.f;saveMeta()}
+              beep();toast(pm.mode==='f'?'انتهى وقت التركيز! خذ استراحة':'انتهت الاستراحة، هيا نكمل');
+              pm.mode=pm.mode==='f'?'b':'f';pm.left=(pm.mode==='f'?p.f:p.b)*60;if(sv==='pom')svPom();return}
+            pmDraw();
+          }
+          function svPom(){
+            const p=S.st.pom;if(!pm.run&&!pm.left)pm.left=(pm.mode==='f'?p.f:p.b)*60;
+            const days=[];for(let d=6;d>=0;d--){const t=new Date();t.setDate(t.getDate()-d);days.push([['أحد','اثنين','ثلاثاء','أربعاء','خميس','جمعة','سبت'][t.getDay()],p.log[dk(t)]||0])}
+            const mx=Math.max(30,...days.map(d=>d[1])),today=days[6][1],wk=days.reduce((a,d)=>a+d[1],0);
+            svb().innerHTML='<div class="lb" style="text-align:center">'+(pm.mode==='f'?'وقت التركيز':'استراحة')+'</div><div id="pmt" class="bigt"></div><div class="bar"><i id="pmb"></i></div>'+
+            '<div class="row" style="justify-content:center"><button id="pms" class="on" style="padding:10px 22px">'+(pm.run?'إيقاف مؤقت':'ابدأ')+'</button><button id="pmr">إعادة</button><button id="pmm">'+(pm.mode==='f'?'انتقل للاستراحة':'انتقل للتركيز')+'</button></div>'+
+            '<div class="mrow"><div class="mc"><div class="lb">دقائق التركيز</div><input id="pmf" class="fld" type="number" min="1" max="180" value="'+p.f+'"></div><div class="mc"><div class="lb">دقائق الاستراحة</div><input id="pmb2" class="fld" type="number" min="1" max="60" value="'+p.b+'"></div></div>'+
+            '<div class="lb">اليوم: '+today+' دقيقة · آخر 7 أيام: '+wk+' دقيقة</div><div class="dbars">'+days.map(d=>'<div><i style="height:'+Math.max(2,d[1]/mx*70)+'px"></i>'+d[0]+'</div>').join('')+'</div>';
+            pmDraw();
+            $('#pms').onclick=()=>{if(pm.run){pm.run=false;clearInterval(pm.iv)}else{pm.run=true;pm.end=Date.now()+pm.left*1000;clearInterval(pm.iv);pm.iv=setInterval(pmTick,500)}svPom()};
+            $('#pmr').onclick=()=>{pm.run=false;clearInterval(pm.iv);pm.left=(pm.mode==='f'?p.f:p.b)*60;svPom()};
+            $('#pmm').onclick=()=>{pm.run=false;clearInterval(pm.iv);pm.mode=pm.mode==='f'?'b':'f';pm.left=(pm.mode==='f'?p.f:p.b)*60;svPom()};
+            $('#pmf').onchange=e=>{p.f=clampN(e.target.value,1,180,25);saveMeta();if(!pm.run&&pm.mode==='f')pm.left=p.f*60;svPom()};
+            $('#pmb2').onchange=e=>{p.b=clampN(e.target.value,1,60,5);saveMeta();if(!pm.run&&pm.mode==='b')pm.left=p.b*60;svPom()};
+          }
+
+          /* 2) بطاقات المراجعة (تكرار متباعد) */
+          const fc={q:[],c:null,show:false};
+          function fcGrade(c,g){
+            const t=dnum();
+            if(g===0){c.reps=0;c.iv=0;c.ef=Math.max(1.3,(c.ef||2.5)-.2);c.due=t;fc.q.push(c)}
+            else{c.ef=Math.max(1.3,(c.ef||2.5)+(g===1?-.15:g===3?.15:0));
+              c.iv=g===1?Math.max(1,Math.round((c.iv||1)*1.2)):c.reps===0?(g===3?3:1):c.reps===1?(g===3?6:3):Math.round(c.iv*c.ef*(g===3?1.3:1));
+              c.reps++;c.due=t+c.iv}
+            saveMeta();
+          }
+          function svCards(v){
+            const cs=S.st.cards,t=dnum(),due=cs.filter(c=>c.due<=t),decks=[...new Set(cs.map(c=>c.deck))];
+            if(v==='rev'){
+              if(!fc.c){fc.c=fc.q.shift()||null;fc.show=false}
+              if(!fc.c){svb().innerHTML='<div class="empty">'+ic('check')+'<div>أحسنت! انتهت مراجعة اليوم</div></div><button id="fcb">رجوع</button>';$('#fcb').onclick=()=>svCards();return}
+              svb().innerHTML='<div class="lb">المتبقي: '+(fc.q.length+1)+' · '+esc(fc.c.deck)+'</div><button id="fcs" class="fcard">'+esc(fc.show?fc.c.b:fc.c.f)+'</button>'+
+              (fc.show?'<div class="gr4"><button data-g="0">لم أعرف</button><button data-g="1">صعب</button><button data-g="2">جيد</button><button data-g="3">سهل</button></div>':'<div class="lb" style="text-align:center">المس البطاقة لإظهار الجواب</div>')+'<button id="fcb">إنهاء</button>';
+              $('#fcs').onclick=()=>{fc.show=!fc.show;svCards('rev')};$('#fcb').onclick=()=>{fc.c=null;svCards()};
+              svb().querySelectorAll('[data-g]').forEach(b=>b.onclick=()=>{fcGrade(fc.c,+b.dataset.g);fc.c=fc.q.shift()||null;fc.show=false;svCards('rev')});return;
+            }
+            if(v==='add'){
+              svb().innerHTML='<input id="fcd" class="fld" list="fcl" placeholder="المادة / المجموعة" value="'+esc(decks[0]||'')+'"><datalist id="fcl">'+decks.map(d=>'<option value="'+esc(d)+'">').join('')+'</datalist>'+
+              '<textarea id="fcf" class="fld" rows="3" placeholder="السؤال / المصطلح"></textarea><textarea id="fcz" class="fld" rows="3" placeholder="الجواب / التعريف"></textarea><div class="row"><button id="fcb">رجوع</button><button id="fcv" class="on">حفظ البطاقة</button></div>';
+              $('#fcb').onclick=()=>svCards();
+              $('#fcv').onclick=()=>{const d=$('#fcd').value.trim()||'عام',f=$('#fcf').value.trim(),b=$('#fcz').value.trim();if(!f||!b){toast('اكتب السؤال والجواب');return}
+                cs.push({id:uid(),deck:d,f,b,ef:2.5,iv:0,reps:0,due:dnum()});saveMeta();$('#fcf').value='';$('#fcz').value='';toast('تمت الإضافة ('+cs.length+')');$('#fcf').focus()};return;
+            }
+            if(v==='list'){
+              svb().innerHTML='<button id="fcb">رجوع</button>'+(cs.length?cs.map(c=>'<div class="it"><div style="flex:1"><b>'+esc(c.f)+'</b><small>'+esc(c.deck)+' · '+(c.due<=t?'مستحقة':'بعد '+(c.due-t)+' يوم')+'</small></div><button class="ib" data-x="'+c.id+'" aria-label="حذف">'+ic('trash')+'</button></div>').join(''):'<div class="empty">لا توجد بطاقات</div>');
+              $('#fcb').onclick=()=>svCards();
+              svb().querySelectorAll('[data-x]').forEach(b=>b.onclick=()=>{S.st.cards=S.st.cards.filter(c=>c.id!==b.dataset.x);saveMeta();svCards('list')});return;
+            }
+            svb().innerHTML='<div class="mrow"><div class="mc"><div class="bigt" style="font-size:40px">'+due.length+'</div><div class="lb">بطاقة مستحقة اليوم من '+cs.length+'</div></div></div>'+
+            '<button id="fcr" class="on" style="padding:12px"'+(due.length?'':' disabled')+'>ابدأ المراجعة</button><button id="fca">إضافة بطاقة</button><button id="fcl2">كل البطاقات</button>'+
+            (decks.length?'<div class="lb">المجموعات</div>'+decks.map(d=>'<div class="it"><b style="flex:1">'+esc(d)+'</b><span class="pill" style="background:#2f6bff">'+cs.filter(c=>c.deck===d).length+'</span></div>').join(''):'<div class="lb">أضف بطاقاتك الأولى. تُجدول المراجعة تلقائيًا بالتكرار المتباعد: ما تعرفه يتباعد، وما تنساه يعود قريبًا.</div>');
+            $('#fcr').onclick=()=>{fc.q=due.slice().sort(()=>Math.random()-.5);fc.c=null;fc.show=false;svCards('rev')};$('#fca').onclick=()=>svCards('add');$('#fcl2').onclick=()=>svCards('list');
+          }
+
+          /* 3) الواجبات والاختبارات */
+          function svTasks(){
+            const td=new Date(new Date().toDateString()),L=S.st.tasks.slice().sort((a,b)=>(!!a.done-!!b.done)||a.d.localeCompare(b.d));
+            const row=t=>{const n=Math.round((new Date(t.d+'T00:00:00')-td)/864e5),lab=n<0?'متأخر '+(-n)+' يوم':n===0?'اليوم':n===1?'غدًا':'بعد '+n+' يوم',col=t.done?'#8a93a6':n<0?'#e5484d':n<=2?'#f08c00':'#2f9e44';
+              return '<div class="it"><input type="checkbox" data-c="'+t.id+'" '+(t.done?'checked':'')+' aria-label="تم"><div style="flex:1;'+(t.done?'text-decoration:line-through;opacity:.55':'')+'"><b>'+esc(t.t)+'</b><small>'+esc(t.k)+' · '+t.d+'</small></div><span class="pill" style="background:'+col+'">'+(t.done?'منجز':lab)+'</span><button class="ib" data-x="'+t.id+'" aria-label="حذف">'+ic('trash')+'</button></div>'};
+            svb().innerHTML='<input id="tkt" class="fld" placeholder="العنوان (مثال: اختبار الكيمياء النصفي)"><div class="mrow"><input id="tkd" class="fld" type="date" value="'+dk(new Date())+'"><select id="tkk" class="fld"><option>اختبار</option><option>واجب</option><option>مشروع</option><option>عرض تقديمي</option></select></div><button id="tka" class="on">إضافة</button>'+(L.length?L.map(row).join(''):'<div class="empty">لا توجد مهام</div>');
+            $('#tka').onclick=()=>{const t=$('#tkt').value.trim(),d=$('#tkd').value;if(!t||!d){toast('اكتب العنوان واختر التاريخ');return}S.st.tasks.push({id:uid(),t,d,k:$('#tkk').value,done:false});saveMeta();svTasks()};
+            svb().querySelectorAll('[data-c]').forEach(b=>b.onchange=()=>{const t=S.st.tasks.find(x=>x.id===b.dataset.c);if(t){t.done=b.checked;saveMeta();svTasks()}});
+            svb().querySelectorAll('[data-x]').forEach(b=>b.onclick=()=>{S.st.tasks=S.st.tasks.filter(x=>x.id!==b.dataset.x);saveMeta();svTasks()});
+          }
+
+          /* 5) الجدول الأسبوعي للمحاضرات */
+          const DAYS=['السبت','الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة'];
+          function svTt(){
+            const L=S.st.tt,now=new Date(),di=(now.getDay()+1)%7,nm=now.getHours()*60+now.getMinutes(),tm=s=>{const a=s.split(':');return +a[0]*60+ +a[1]};
+            let nx=null,best=1e9;L.forEach(t=>{let d=(t.day-di+7)%7;const m=tm(t.s)-nm;if(d===0&&m<0)d=7;const v=d*1440+m;if(v<best){best=v;nx=t}});
+            const nl=nx?'المحاضرة القادمة: <b>'+esc(nx.n)+'</b> — '+DAYS[nx.day]+' '+nx.s+' (بعد '+(best>=1440?Math.floor(best/1440)+' يوم ':'')+(Math.floor(best%1440/60)?Math.floor(best%1440/60)+' س ':'')+(best%60)+' د)':'';
+            svb().innerHTML=(nl?'<div class="it" style="display:block">'+nl+'</div>':'')+
+            '<div class="mrow"><select id="ttd" class="fld">'+DAYS.map((d,i)=>'<option value="'+i+'"'+(i===di?' selected':'')+'>'+d+'</option>').join('')+'</select><input id="tts" class="fld" type="time" value="08:00"><input id="tte" class="fld" type="time" value="09:30"></div>'+
+            '<div class="mrow"><input id="ttn" class="fld" placeholder="المادة"><input id="ttr" class="fld" placeholder="القاعة"></div><button id="tta" class="on">إضافة محاضرة</button>'+
+            DAYS.map((d,i)=>{const a=L.filter(t=>t.day===i).sort((x,y)=>x.s.localeCompare(y.s));return a.length?'<div class="lb"'+(i===di?' style="color:var(--ac)"':'')+'>'+d+(i===di?' (اليوم)':'')+'</div>'+a.map(t=>'<div class="it"><div style="flex:1"><b>'+esc(t.n)+'</b><small>'+t.s+' - '+t.e+(t.r?' · '+esc(t.r):'')+'</small></div><button class="ib" data-x="'+t.id+'" aria-label="حذف">'+ic('trash')+'</button></div>').join(''):''}).join('');
+            $('#tta').onclick=()=>{const n=$('#ttn').value.trim(),s=$('#tts').value,e=$('#tte').value;if(!n||!s||!e){toast('اكتب المادة وحدّد الوقت');return}if(e<=s){toast('وقت النهاية يجب أن يكون بعد البداية');return}L.push({id:uid(),day:+$('#ttd').value,s,e,n,r:$('#ttr').value.trim()});saveMeta();svTt()};
+            svb().querySelectorAll('[data-x]').forEach(b=>b.onclick=()=>{S.st.tt=S.st.tt.filter(x=>x.id!==b.dataset.x);saveMeta();svTt()});
+          }
+
+          const SC=()=>window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.Shortcut;
+          $('#npin').onclick=async()=>{
+            const p=SC();if(!p){toast('الاختصار متاح في تطبيق الأندرويد فقط');return}
+            try{await p.pin({id:cur.id,title:$('#nt').value.trim()||cur.title,color:ncv});toast('أكّد الإضافة في نافذة النظام')}
+            catch(e){toast('هاتفك لا يدعم اختصارات الشاشة الرئيسية')}
+          };
+          function openById(id){
+            if(!S.notes.some(n=>n.id===id)){toast('هذه الملاحظة لم تعد موجودة');return}
+            deselect();$('#nd').hidden=true;$('#pp').hidden=true;openNote(id);setTool('pen');
+          }
+          window.addEventListener('najmaOpen',e=>e.id&&ready.then(()=>openById(e.id)));
+          const ready=initStore().then(home);
+          {const A=window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.App;
+          const goBack=()=>{
+            const o=['#oc','#sv','#gp','#im','#nd'].map(x=>$(x)).find(x=>x&&!x.hidden);
+            if(o){o.hidden=true;return}
+            if(!$('#pp').hidden){$('#pp').hidden=true;return}
+            if(cur){deselect();save();flush();home();return}
+            if(A&&A.exitApp)A.exitApp();
+          };
+          if(A&&A.addListener)A.addListener('backButton',goBack);}
+          {const p=SC();if(p)p.getLaunch().then(r=>r&&r.id&&ready.then(()=>openById(r.id))).catch(()=>{})}
+          $('#pages').addEventListener('scroll',()=>{rq();if(cur&&cv.length){const p=curPage();if(p!==ap){ap=p;pnUpd();actv()}}});window.addEventListener('resize',rq);window.addEventListener('resize',reveal);if(window.visualViewport)visualViewport.addEventListener('resize',reveal);
+          </script>
+          </body>
+          </html>
+          NAJMA_EOF
+
+      - name: Create Capacitor project
+        run: |
+          npm init -y
+          npm install @capacitor/core@6 @capacitor/cli@6 @capacitor/android@6 @capacitor/filesystem@6 @capacitor/share@6 @capacitor/app@6
+          npx cap init "نجمة" com.najma.notes --web-dir=www
+          npx cap add android
+          npm install pdfjs-dist@3.11.174 --omit=optional
+          mkdir -p www/pdfjs
+          cp node_modules/pdfjs-dist/build/pdf.min.js node_modules/pdfjs-dist/build/pdf.worker.min.js www/pdfjs/
+          npx cap sync android
+
+      - name: Add home-screen shortcut plugin
+        run: |
+          D=android/app/src/main/java/com/najma/notes
+          mkdir -p "$D"
+          cat > "$D/ShortcutPlugin.java" <<'JAVA_EOF'
+          package com.najma.notes;
+
+          import android.content.Context;
+          import android.content.Intent;
+          import android.content.pm.ShortcutInfo;
+          import android.content.pm.ShortcutManager;
+          import android.graphics.Bitmap;
+          import android.graphics.Canvas;
+          import android.graphics.Color;
+          import android.graphics.Paint;
+          import android.graphics.RectF;
+          import android.graphics.drawable.Icon;
+          import android.os.Build;
+          import android.text.Layout;
+          import android.text.StaticLayout;
+          import android.text.TextPaint;
+          import com.getcapacitor.JSObject;
+          import com.getcapacitor.Plugin;
+          import com.getcapacitor.PluginCall;
+          import com.getcapacitor.PluginMethod;
+          import com.getcapacitor.annotation.CapacitorPlugin;
+
+          @CapacitorPlugin(name = "Shortcut")
+          public class ShortcutPlugin extends Plugin {
+            @PluginMethod
+            public void pin(PluginCall call) {
+              String id = call.getString("id", "");
+              String title = call.getString("title", "Note").trim();
+              if (title.isEmpty()) title = "Note";
+              int color;
+              try { color = Color.parseColor(call.getString("color", "#3b5bdb")); } catch (Exception e) { color = Color.parseColor("#3b5bdb"); }
+              if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) { call.reject("unsupported"); return; }
+              Context c = getContext();
+              ShortcutManager m = c.getSystemService(ShortcutManager.class);
+              if (m == null || !m.isRequestPinShortcutSupported()) { call.reject("unsupported"); return; }
+              Intent i = new Intent(c, MainActivity.class);
+              i.setAction(Intent.ACTION_VIEW);
+              i.putExtra("najmaNote", id);
+              i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+              Bitmap b = Bitmap.createBitmap(192, 192, Bitmap.Config.ARGB_8888);
+              Canvas cv = new Canvas(b);
+              Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
+              p.setColor(color);
+              cv.drawRoundRect(new RectF(0, 0, 192, 192), 44, 44, p);
+              TextPaint tp = new TextPaint(Paint.ANTI_ALIAS_FLAG);
+              tp.setColor(Color.WHITE);
+              tp.setFakeBoldText(true);
+              StaticLayout sl = null;
+              for (float sz = 60; sz >= 16; sz -= 4) {
+                tp.setTextSize(sz);
+                sl = StaticLayout.Builder.obtain(title, 0, title.length(), tp, 160)
+                  .setAlignment(Layout.Alignment.ALIGN_CENTER).build();
+                if (sl.getHeight() <= 164) break;
               }
-              kotlinOptions { jvmTarget = "17" }
+              cv.save();
+              cv.translate(16, (192 - sl.getHeight()) / 2f);
+              sl.draw(cv);
+              cv.restore();
+              ShortcutInfo s = new ShortcutInfo.Builder(c, "note-" + id)
+                .setShortLabel(title).setLongLabel(title)
+                .setIcon(Icon.createWithBitmap(b)).setIntent(i).build();
+              m.requestPinShortcut(s, null);
+              call.resolve();
+            }
+
+            @PluginMethod
+            public void getLaunch(PluginCall call) {
+              Intent i = getActivity().getIntent();
+              JSObject r = new JSObject();
+              String id = i == null ? null : i.getStringExtra("najmaNote");
+              if (id != null) { r.put("id", id); i.removeExtra("najmaNote"); }
+              call.resolve(r);
+            }
           }
+          JAVA_EOF
+          cat > "$D/InkPlugin.java" <<'JAVA_EOF'
+          package com.najma.notes;
 
-          dependencies {
-              // Removed native tess-two dependency to keep CI simple and avoid NDK/CMake issues.
-              // Add dependencies here if needed.
-          }
-          EOF
+          import com.getcapacitor.JSArray;
+          import com.getcapacitor.JSObject;
+          import com.getcapacitor.Plugin;
+          import com.getcapacitor.PluginCall;
+          import com.getcapacitor.PluginMethod;
+          import com.getcapacitor.annotation.CapacitorPlugin;
+          import com.google.mlkit.common.model.DownloadConditions;
+          import com.google.mlkit.common.model.RemoteModelManager;
+          import com.google.mlkit.vision.digitalink.DigitalInkRecognition;
+          import com.google.mlkit.vision.digitalink.DigitalInkRecognitionModel;
+          import com.google.mlkit.vision.digitalink.DigitalInkRecognitionModelIdentifier;
+          import com.google.mlkit.vision.digitalink.DigitalInkRecognizer;
+          import com.google.mlkit.vision.digitalink.DigitalInkRecognizerOptions;
+          import com.google.mlkit.vision.digitalink.Ink;
+          import com.google.mlkit.vision.digitalink.RecognitionCandidate;
+          import com.google.mlkit.vision.digitalink.RecognitionContext;
+          import com.google.mlkit.vision.digitalink.WritingArea;
+          import java.util.HashMap;
+          import java.util.List;
+          import java.util.Map;
+          import org.json.JSONArray;
+          import org.json.JSONObject;
 
-          cat > app/src/main/AndroidManifest.xml <<'EOF'
-          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-              <application android:allowBackup="true" android:label="دفتر" android:theme="@style/AppTheme" android:supportsRtl="true">
-                  <activity android:name=".MainActivity" android:exported="true">
-                      <intent-filter>
-                          <action android:name="android.intent.action.MAIN"/>
-                          <category android:name="android.intent.category.LAUNCHER"/>
-                      </intent-filter>
-                  </activity>
-              </application>
-          </manifest>
-          EOF
+          @CapacitorPlugin(name = "Ink")
+          public class InkPlugin extends Plugin {
+            private final Map<String, DigitalInkRecognitionModel> models = new HashMap<>();
+            private final Map<String, DigitalInkRecognizer> recs = new HashMap<>();
 
-          cat > app/src/main/res/values/styles.xml <<'EOF'
-          <resources>
-              <style name="AppTheme" parent="@android:style/Theme.Material.Light.NoActionBar">
-                  <item name="android:fontFamily">sans</item>
-                  <item name="android:colorAccent">#1976D2</item>
-                  <item name="android:statusBarColor">#F5F6FA</item>
-                  <item name="android:navigationBarColor">#F5F6FA</item>
-                  <item name="android:windowLightStatusBar">true</item>
-              </style>
-          </resources>
-          EOF
+            private DigitalInkRecognitionModel model(String lang) throws Exception {
+              DigitalInkRecognitionModel m = models.get(lang);
+              if (m != null) return m;
+              DigitalInkRecognitionModelIdentifier id = DigitalInkRecognitionModelIdentifier.fromLanguageTag(lang);
+              if (id == null) throw new IllegalArgumentException("unsupported language");
+              m = DigitalInkRecognitionModel.builder(id).build();
+              models.put(lang, m);
+              return m;
+            }
 
-          # Write a minimal MainActivity that compiles (replace with your full Activity later)
-          cat > app/src/main/java/com/daftar/notes/MainActivity.kt <<'EOF'
-          package com.daftar.notes
-
-          import android.os.Bundle
-          import android.view.Gravity
-          import android.widget.TextView
-          import androidx.appcompat.app.AppCompatActivity
-
-          class MainActivity : AppCompatActivity() {
-              override fun onCreate(savedInstanceState: Bundle?) {
-                  super.onCreate(savedInstanceState)
-                  val tv = TextView(this).apply {
-                      text = "دفتر — Daftar (Minimal build)"
-                      gravity = Gravity.CENTER
-                      textSize = 20f
+            @PluginMethod
+            public void ensureModel(final PluginCall call) {
+              final String lang = call.getString("lang", "ar");
+              try {
+                final DigitalInkRecognitionModel m = model(lang);
+                final RemoteModelManager mm = RemoteModelManager.getInstance();
+                mm.isModelDownloaded(m).addOnSuccessListener(ok -> {
+                  if (ok != null && ok) {
+                    JSObject r = new JSObject();
+                    r.put("ready", true);
+                    call.resolve(r);
+                    return;
                   }
-                  setContentView(tv)
+                  mm.download(m, new DownloadConditions.Builder().build())
+                    .addOnSuccessListener(v -> {
+                      JSObject r = new JSObject();
+                      r.put("ready", true);
+                      call.resolve(r);
+                    })
+                    .addOnFailureListener(e -> call.reject("download: " + e.getMessage()));
+                }).addOnFailureListener(e -> call.reject("check: " + e.getMessage()));
+              } catch (Exception e) {
+                call.reject("model: " + e.getMessage());
               }
+            }
+
+            @PluginMethod
+            public void recognize(final PluginCall call) {
+              final String lang = call.getString("lang", "ar");
+              final JSArray lines = call.getArray("lines");
+              if (lines == null) { call.reject("no lines"); return; }
+              try {
+                DigitalInkRecognizer rec = recs.get(lang);
+                if (rec == null) {
+                  rec = DigitalInkRecognition.getClient(DigitalInkRecognizerOptions.builder(model(lang)).build());
+                  recs.put(lang, rec);
+                }
+                next(rec, lines, 0, new JSArray(), call);
+              } catch (Exception e) {
+                call.reject("rec: " + e.getMessage());
+              }
+            }
+
+            private void next(final DigitalInkRecognizer rec, final JSArray lines, final int idx, final JSArray out, final PluginCall call) {
+              if (idx >= lines.length()) {
+                JSObject r = new JSObject();
+                r.put("lines", out);
+                call.resolve(r);
+                return;
+              }
+              try {
+                JSONObject ln = lines.getJSONObject(idx);
+                JSONArray strokes = ln.getJSONArray("strokes");
+                Ink.Builder ib = Ink.builder();
+                for (int s = 0; s < strokes.length(); s++) {
+                  JSONArray pts = strokes.getJSONArray(s);
+                  Ink.Stroke.Builder sb = Ink.Stroke.builder();
+                  for (int p = 0; p < pts.length(); p++) {
+                    JSONArray q = pts.getJSONArray(p);
+                    sb.addPoint(Ink.Point.create((float) q.getDouble(0), (float) q.getDouble(1), (long) q.getDouble(2)));
+                  }
+                  ib.addStroke(sb.build());
+                }
+                RecognitionContext ctx = RecognitionContext.builder()
+                  .setWritingArea(new WritingArea((float) ln.optDouble("w", 800), (float) ln.optDouble("h", 100)))
+                  .build();
+                rec.recognize(ib.build(), ctx).addOnSuccessListener(res -> {
+                  JSObject o = new JSObject();
+                  try {
+                    List<RecognitionCandidate> cs = res.getCandidates();
+                    o.put("text", cs.isEmpty() ? "" : cs.get(0).getText());
+                    JSArray alts = new JSArray();
+                    for (int k = 0; k < cs.size() && k < 4; k++) alts.put(cs.get(k).getText());
+                    o.put("alts", alts);
+                  } catch (Exception e) {
+                    o.put("text", "");
+                  }
+                  out.put(o);
+                  next(rec, lines, idx + 1, out, call);
+                }).addOnFailureListener(e -> call.reject("recognize: " + e.getMessage()));
+              } catch (Exception e) {
+                call.reject("ink: " + e.getMessage());
+              }
+            }
           }
-          EOF
+          JAVA_EOF
+          cat > "$D/MainActivity.java" <<'JAVA_EOF'
+          package com.najma.notes;
 
-      - name: Build APK
-        shell: bash
+          import android.content.Intent;
+          import android.os.Bundle;
+          import com.getcapacitor.BridgeActivity;
+
+          public class MainActivity extends BridgeActivity {
+            @Override
+            public void onCreate(Bundle savedInstanceState) {
+              registerPlugin(ShortcutPlugin.class);
+              registerPlugin(InkPlugin.class);
+              super.onCreate(savedInstanceState);
+            }
+
+            @Override
+            protected void onNewIntent(Intent intent) {
+              super.onNewIntent(intent);
+              setIntent(intent);
+              String id = intent.getStringExtra("najmaNote");
+              if (id != null) {
+                intent.removeExtra("najmaNote");
+                getBridge().triggerWindowJSEvent("najmaOpen", "{\"id\":\"" + id + "\"}");
+              }
+            }
+          }
+          JAVA_EOF
+
+      - name: Add ML Kit handwriting recognition dependency
         run: |
-          set -euo pipefail
-          # Use the downloaded gradle binary on PATH (/tmp/gradle-... was added to PATH earlier)
-          gradle --no-daemon --stacktrace --warning-mode all assembleDebug
+          sed -i '/^dependencies {/a\    implementation "com.google.mlkit:digital-ink-recognition:18.1.0"' android/app/build.gradle
+          grep -q "digital-ink-recognition" android/app/build.gradle || { echo "ML Kit dependency was not added"; exit 1; }
 
-      - name: Upload APK
+      - name: Build debug APK
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Upload APK as artifact
         uses: actions/upload-artifact@v4
         with:
-          name: daftar-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
-          if-no-files-found: error
+          name: najma-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Publish APK in Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ github.run_number }}
+          name: Najma v${{ github.run_number }}
+          files: android/app/build/outputs/apk/debug/app-debug.apk
