@@ -1,0 +1,224 @@
+name: Build Density Tool
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 8.9
+
+      - name: Create project files
+        run: |
+          mkdir -p app/src/main/java/com/example/densitytool
+
+          cat > settings.gradle << 'EOF'
+          pluginManagement {
+              repositories { google(); mavenCentral(); gradlePluginPortal() }
+          }
+          dependencyResolutionManagement {
+              repositories { google(); mavenCentral() }
+          }
+          rootProject.name = "DensityTool"
+          include ':app'
+          EOF
+
+          cat > build.gradle << 'EOF'
+          plugins {
+              id 'com.android.application' version '8.5.2' apply false
+          }
+          EOF
+
+          cat > gradle.properties << 'EOF'
+          org.gradle.jvmargs=-Xmx2g
+          android.useAndroidX=false
+          EOF
+
+          cat > app/build.gradle << 'EOF'
+          plugins {
+              id 'com.android.application'
+          }
+          android {
+              namespace 'com.example.densitytool'
+              compileSdk 34
+              defaultConfig {
+                  applicationId 'com.example.densitytool'
+                  minSdk 26
+                  targetSdk 34
+                  versionCode 1
+                  versionName '1.0'
+              }
+              compileOptions {
+                  sourceCompatibility JavaVersion.VERSION_17
+                  targetCompatibility JavaVersion.VERSION_17
+              }
+          }
+          EOF
+
+          cat > app/src/main/AndroidManifest.xml << 'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+              <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS" />
+              <application
+                  android:label="Density Tool"
+                  android:theme="@android:style/Theme.Material.Light.NoActionBar">
+                  <activity
+                      android:name=".MainActivity"
+                      android:exported="true"
+                      android:configChanges="density|screenLayout|smallestScreenSize|screenSize|orientation|uiMode|fontScale|keyboard|keyboardHidden">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+                  </activity>
+              </application>
+          </manifest>
+          EOF
+
+          cat > app/src/main/java/com/example/densitytool/MainActivity.java << 'EOF'
+          package com.example.densitytool;
+
+          import android.app.Activity;
+          import android.content.ContentResolver;
+          import android.content.Context;
+          import android.content.SharedPreferences;
+          import android.content.res.Resources;
+          import android.os.Bundle;
+          import android.os.Handler;
+          import android.os.Looper;
+          import android.provider.Settings;
+          import android.text.InputType;
+          import android.view.View;
+          import android.widget.Button;
+          import android.widget.EditText;
+          import android.widget.LinearLayout;
+          import android.widget.TextView;
+
+          public class MainActivity extends Activity {
+              static final String KEY = "display_density_forced";
+              final Handler handler = new Handler(Looper.getMainLooper());
+              Runnable revertTask;
+              TextView status;
+              EditText input;
+              Button keepBtn;
+              SharedPreferences sp;
+
+              @Override
+              protected void onCreate(Bundle b) {
+                  super.onCreate(b);
+                  sp = getSharedPreferences("d", Context.MODE_PRIVATE);
+                  if (!sp.contains("orig")) {
+                      sp.edit().putInt("orig",
+                          Resources.getSystem().getDisplayMetrics().densityDpi).apply();
+                  }
+
+                  LinearLayout root = new LinearLayout(this);
+                  root.setOrientation(LinearLayout.VERTICAL);
+                  root.setPadding(48, 96, 48, 48);
+
+                  TextView title = new TextView(this);
+                  title.setText("تغيير كثافة الشاشة (DPI)");
+                  title.setTextSize(22);
+                  root.addView(title);
+
+                  status = new TextView(this);
+                  status.setTextSize(16);
+                  status.setPadding(0, 32, 0, 32);
+                  root.addView(status);
+
+                  input = new EditText(this);
+                  input.setInputType(InputType.TYPE_CLASS_NUMBER);
+                  input.setHint("مثال: 380 (أقل = أكبر عرضاً وأصغر عناصر)");
+                  root.addView(input);
+
+                  Button apply = new Button(this);
+                  apply.setText("تطبيق (يرجع تلقائياً بعد 15 ثانية)");
+                  apply.setOnClickListener(v -> onApply());
+                  root.addView(apply);
+
+                  keepBtn = new Button(this);
+                  keepBtn.setText("إبقاء التغيير");
+                  keepBtn.setVisibility(View.GONE);
+                  keepBtn.setOnClickListener(v -> {
+                      cancelRevert();
+                      keepBtn.setVisibility(View.GONE);
+                      refresh("تم الإبقاء على التغيير.");
+                  });
+                  root.addView(keepBtn);
+
+                  Button reset = new Button(this);
+                  reset.setText("رجوع للأصلي");
+                  reset.setOnClickListener(v -> {
+                      cancelRevert();
+                      keepBtn.setVisibility(View.GONE);
+                      setDensity(sp.getInt("orig", 420));
+                  });
+                  root.addView(reset);
+
+                  setContentView(root);
+                  refresh("");
+              }
+
+              void refresh(String msg) {
+                  int cur = Resources.getSystem().getDisplayMetrics().densityDpi;
+                  status.setText("الحالي: " + cur + "  |  الأصلي المحفوظ: "
+                      + sp.getInt("orig", 0) + "\n" + msg);
+              }
+
+              void onApply() {
+                  String s = input.getText().toString().trim();
+                  if (s.isEmpty()) { refresh("اكتب رقماً."); return; }
+                  int d = Integer.parseInt(s);
+                  if (d < 240 || d > 640) { refresh("الرقم يجب أن يكون بين 240 و640."); return; }
+                  if (setDensity(d)) {
+                      keepBtn.setVisibility(View.VISIBLE);
+                      cancelRevert();
+                      final int orig = sp.getInt("orig", 420);
+                      revertTask = () -> {
+                          setDensity(orig);
+                          keepBtn.setVisibility(View.GONE);
+                      };
+                      handler.postDelayed(revertTask, 15000);
+                  }
+              }
+
+              void cancelRevert() {
+                  if (revertTask != null) handler.removeCallbacks(revertTask);
+                  revertTask = null;
+              }
+
+              boolean setDensity(int d) {
+                  try {
+                      ContentResolver cr = getContentResolver();
+                      Settings.Secure.putString(cr, KEY, String.valueOf(d));
+                      refresh("تم ضبط الكثافة على " + d);
+                      return true;
+                  } catch (SecurityException e) {
+                      status.setText("الصلاحية غير ممنوحة. نفّذ مرة واحدة من الكمبيوتر:\n\n"
+                          + "adb shell pm grant " + getPackageName()
+                          + " android.permission.WRITE_SECURE_SETTINGS");
+                      return false;
+                  }
+              }
+          }
+          EOF
+
+      - name: Build debug APK
+        run: gradle assembleDebug --no-daemon
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DensityTool-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
